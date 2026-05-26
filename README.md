@@ -6,6 +6,8 @@ Color Spritx ships as a **single self-contained HTML file** — no install, no b
 
 © 2026 Carlos A. Camacho
 
+![Color Spritx editor](screenshot.png)
+
 ---
 
 ## Table of Contents
