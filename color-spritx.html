@@ -1,0 +1,3067 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Color Spritx — CoCo PMODE Pixel Editor</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans&family=Doto:wght@400;700&family=Tiny5&family=Micro+5&family=Jacquarda+Bastarda+9&family=Bytesized&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     Color Spritx — Deluxe Paint inspired chrome
+     Beveled gray panels, recessed wells, chunky icon toolbox.
+     ============================================================ */
+  :root{
+    --dp-face:#9a9a9a;        /* panel face gray            */
+    --dp-face-lt:#b8b8b8;
+    --dp-hi:#e8e8e8;          /* top/left bevel highlight   */
+    --dp-sh:#525252;          /* bottom/right bevel shadow  */
+    --dp-sh-dk:#2c2c2c;
+    --dp-ink:#0a0a0a;
+    --dp-accent:#3a3a3a;      /* title bar / highlight — dark grey */
+    --dp-accent-2:#565656;
+    --dp-brand:#2e2e2e;       /* brand badge */
+    --dp-canvasbg:#202020;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--dp-canvasbg);
+    font-family:"Courier New",ui-monospace,monospace;
+    font-size:12px;
+    color:var(--dp-ink);
+    user-select:none;
+    -webkit-user-select:none;
+    overflow:hidden;
+  }
+  /* ---- bevels --------------------------------------------------*/
+  .bevel-out{
+    background:var(--dp-face);
+    border-top:2px solid var(--dp-hi);
+    border-left:2px solid var(--dp-hi);
+    border-right:2px solid var(--dp-sh-dk);
+    border-bottom:2px solid var(--dp-sh-dk);
+  }
+  .bevel-in{
+    background:var(--dp-face);
+    border-top:2px solid var(--dp-sh-dk);
+    border-left:2px solid var(--dp-sh-dk);
+    border-right:2px solid var(--dp-hi);
+    border-bottom:2px solid var(--dp-hi);
+  }
+  .well{
+    background:#3a3a3a;
+    border-top:2px solid var(--dp-sh-dk);
+    border-left:2px solid var(--dp-sh-dk);
+    border-right:2px solid var(--dp-hi);
+    border-bottom:2px solid var(--dp-hi);
+  }
+
+  /* ---- app shell ----------------------------------------------*/
+  #app{display:flex;flex-direction:column;height:100vh;}
+
+  /* ---- menu bar -----------------------------------------------*/
+  #menubar{
+    display:flex;align-items:stretch;
+    background:var(--dp-face);
+    border-bottom:2px solid var(--dp-sh-dk);
+    box-shadow:inset 0 2px 0 var(--dp-hi);
+    height:26px;flex:0 0 auto;position:relative;z-index:50;
+  }
+  .menu-title{
+    padding:4px 12px;cursor:default;font-weight:bold;letter-spacing:.5px;
+    display:flex;align-items:center;position:relative;color:#000;
+  }
+  .menu-title:hover,.menu-title.open{background:var(--dp-accent);color:#fff;}
+  /* brand matches the other titles (same grey face), just keeps the gold diamond */
+  .menu-brand{
+    color:#000;border-right:2px solid var(--dp-sh-dk);letter-spacing:1px;
+  }
+  .menu-brand:hover,.menu-brand.open{background:var(--dp-accent);color:#fff;}
+  .dropdown-panel{
+    position:absolute;top:22px;left:0;min-width:210px;display:none;
+    padding:3px;z-index:60;
+  }
+  .dropdown-panel.show{display:block;}
+  .menu-item{
+    padding:5px 14px;display:flex;justify-content:space-between;gap:24px;cursor:pointer;
+    white-space:nowrap;color:#000;
+  }
+  .menu-item:hover{background:var(--dp-accent);color:#fff;}
+  .menu-item .sc{opacity:.55;font-size:11px;color:inherit;}
+  .menu-item:hover .sc{opacity:.9;}
+  .menu-sep{height:2px;margin:3px 4px;border-top:1px solid var(--dp-sh);border-bottom:1px solid var(--dp-hi);}
+
+  /* ---- main row -----------------------------------------------*/
+  #main{display:flex;flex:1 1 auto;min-height:0;}
+
+  /* ---- toolbox (left) -----------------------------------------*/
+  #toolbox{
+    flex:0 0 auto;width:96px;padding:5px;margin:4px;
+    display:flex;flex-direction:column;gap:5px;overflow-y:auto;
+  }
+  .tool-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;}
+  .tool-btn{
+    height:34px;display:flex;align-items:center;justify-content:center;
+    cursor:pointer;font-size:16px;position:relative;
+  }
+  .tool-btn:active{border-top:2px solid var(--dp-sh-dk);border-left:2px solid var(--dp-sh-dk);
+    border-right:2px solid var(--dp-hi);border-bottom:2px solid var(--dp-hi);}
+  .tool-btn.active{
+    border-top:2px solid var(--dp-sh-dk);border-left:2px solid var(--dp-sh-dk);
+    border-right:2px solid var(--dp-hi);border-bottom:2px solid var(--dp-hi);
+    background:var(--dp-face-lt);
+  }
+  .tool-btn svg{width:20px;height:20px;pointer-events:none;}
+  .tb-label{text-align:center;font-size:10px;font-weight:bold;opacity:.7;margin:2px 0 0;}
+
+  /* ---- canvas stage (center) ----------------------------------*/
+  #stagewrap{flex:1 1 auto;display:flex;flex-direction:column;min-width:0;margin:4px 0;}
+  #stage{
+    flex:1 1 auto;overflow:auto;position:relative;
+    background:
+      repeating-conic-gradient(#2a2a2a 0% 25%, #242424 0% 50%) 50% / 16px 16px;
+    min-height:0;
+  }
+  /* center via margin:auto so overflowing top/left stay reachable by scroll */
+  #canvasHolder{position:relative;box-shadow:0 0 0 1px #000,0 8px 30px rgba(0,0,0,.6);cursor:crosshair;margin:auto;}
+  #canvasHolder canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;position:absolute;top:0;left:0;}
+  #drawCanvas{position:relative !important;cursor:crosshair;}
+  #overlayCanvas{pointer-events:none;}
+
+  /* ---- right column -------------------------------------------*/
+  #rightcol{
+    flex:0 0 auto;width:232px;margin:4px;display:flex;flex-direction:column;gap:6px;
+    overflow-y:auto;
+  }
+  .panel{padding:6px;}
+  .panel h6{
+    margin:-6px -6px 6px;padding:3px 6px;font-size:11px;font-weight:bold;
+    background:var(--dp-accent);color:#fff;letter-spacing:.5px;
+    border-bottom:2px solid var(--dp-sh-dk);
+    display:flex;align-items:center;justify-content:space-between;cursor:pointer;
+  }
+  .panel h6 .h6-title{flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .panel h6 .h6-btns{display:flex;gap:4px;flex:0 0 auto;}
+  .panel h6 .h6-btn{cursor:pointer;width:16px;text-align:center;opacity:.85;font-size:12px;}
+  .panel h6 .h6-btn:hover{opacity:1;color:#ffcc00;}
+  .panel.collapsed .panel-body{display:none;}
+  .panel.collapsed h6{margin-bottom:-6px;}
+  .panel .caret{transition:transform .12s;}
+  .panel.collapsed .caret{transform:rotate(-90deg);}
+  /* floating */
+  .panel.floating{
+    position:fixed;z-index:150;width:232px;box-shadow:0 8px 28px rgba(0,0,0,.6);
+    margin:0;
+  }
+  .panel.floating h6{cursor:move;}
+  #floatLayer{position:fixed;inset:0;pointer-events:none;z-index:140;}
+  #floatLayer .panel{pointer-events:auto;}
+
+  /* ---- palette (picks colour into the active FG/BG slot) ------*/
+  #palette{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+  #patternGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;}
+  .pat-sw{aspect-ratio:1;cursor:pointer;image-rendering:pixelated;border:2px solid var(--dp-sh-dk);width:100%;}
+  .pat-sw.sel{border-color:#ffcc00;box-shadow:0 0 0 1px #ffcc00;}
+  .swatch{
+    height:42px;cursor:pointer;position:relative;display:flex;align-items:flex-end;
+    justify-content:flex-start;padding:2px;
+  }
+  .swatch .idx{font-size:10px;font-weight:bold;color:#000;background:rgba(255,255,255,.55);padding:0 3px;line-height:1.3;}
+  .swatch.active-pick{outline:3px solid #ffcc00;outline-offset:-3px;}
+
+  /* ---- FG/BG colour slots in the toolbox (Photoshop-style) ----*/
+  #colorSlots{margin:8px 0 4px;padding-top:6px;border-top:1px solid var(--dp-sh);}
+  .cs-stack{position:relative;width:64px;height:48px;margin:0 auto;}
+  .cs-sw{position:absolute;width:34px;height:34px;cursor:pointer;border:2px solid #000;
+    box-shadow:0 0 0 2px var(--dp-hi);}
+  .cs-bg{right:2px;bottom:2px;}
+  .cs-fg{left:2px;top:2px;z-index:2;}
+  .cs-active{box-shadow:0 0 0 2px #ffcc00;}
+  .cs-swap{position:absolute;right:-2px;top:-4px;z-index:3;font-size:13px;cursor:pointer;
+    background:var(--dp-face);border:1px solid var(--dp-sh-dk);line-height:1;padding:1px 2px;}
+
+  /* ---- preview ------------------------------------------------*/
+  #previewWrap{display:flex;justify-content:center;align-items:flex-start;padding:4px;
+    overflow:auto;max-height:300px;max-width:100%;}
+  #previewCanvas{image-rendering:pixelated;background:#000;display:block;flex:0 0 auto;}
+
+  /* ---- layers -------------------------------------------------*/
+  #layerList{display:flex;flex-direction:column;gap:3px;max-height:200px;overflow-y:auto;margin-bottom:6px;}
+  .layer-row{
+    display:flex;align-items:center;gap:5px;padding:4px;cursor:pointer;
+  }
+  .layer-row.sel{background:var(--dp-accent);color:#fff;}
+  .layer-row .eye{width:18px;text-align:center;cursor:pointer;font-size:13px;}
+  .layer-row .lname{flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .layer-row.dragging{opacity:.4;}
+  .layer-row.dragover{box-shadow:inset 0 2px 0 #ffcc00;}
+
+  /* ---- sprites list -------------------------------------------*/
+  #spriteList{display:flex;flex-direction:column;gap:2px;padding:3px;}
+  .sprite-row{display:flex;align-items:center;gap:5px;padding:3px 4px;cursor:pointer;background:var(--dp-face);}
+  .sprite-row.sel{background:var(--dp-accent);color:#fff;}
+  .sprite-row .sthumb{width:24px;height:24px;image-rendering:pixelated;background:#000;border:1px solid #000;flex:0 0 auto;}
+  .sprite-row .sname{flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:transparent;border:0;color:inherit;font-family:inherit;font-size:11px;}
+  .sprite-row .sname:focus{background:#fff;color:#000;outline:1px solid #ffcc00;}
+  /* slowly flashing selected-tile border on the canvas overlay is drawn in JS */
+
+  /* ---- generic buttons & inputs -------------------------------*/
+  .dpbtn{
+    background:var(--dp-face);cursor:pointer;padding:3px 6px;font-size:11px;font-weight:bold;
+    border-top:2px solid var(--dp-hi);border-left:2px solid var(--dp-hi);
+    border-right:2px solid var(--dp-sh-dk);border-bottom:2px solid var(--dp-sh-dk);
+    color:#000;font-family:inherit;
+  }
+  .dpbtn:active{border-top:2px solid var(--dp-sh-dk);border-left:2px solid var(--dp-sh-dk);
+    border-right:2px solid var(--dp-hi);border-bottom:2px solid var(--dp-hi);}
+  .dpbtn:disabled{opacity:.4;cursor:default;}
+  .btn-row{display:flex;gap:4px;flex-wrap:wrap;}
+  .stepper{display:inline-flex;align-items:center;gap:6px;}
+  .stepper .dpbtn{padding:1px 8px;font-size:13px;line-height:1.2;}
+  .stepper #prevZoomVal{min-width:26px;text-align:center;font-weight:bold;}
+  .btn-row .dpbtn{flex:1 1 auto;}
+  label.fld{display:flex;align-items:center;justify-content:space-between;gap:6px;margin:4px 0;font-size:11px;}
+  input[type=number],select,input[type=text]{
+    font-family:inherit;font-size:11px;padding:2px 4px;width:72px;
+    background:#fff;border-top:2px solid var(--dp-sh-dk);border-left:2px solid var(--dp-sh-dk);
+    border-right:2px solid var(--dp-hi);border-bottom:2px solid var(--dp-hi);
+  }
+  select{width:auto;}
+  input[type=color]{width:34px;height:22px;padding:0;border:1px solid #000;}
+  input[type=checkbox]{transform:scale(1.2);}
+
+  /* ---- status bar ---------------------------------------------*/
+  #statusbar{
+    flex:0 0 auto;display:flex;gap:0;align-items:stretch;height:24px;
+    background:var(--dp-face);border-top:2px solid var(--dp-hi);
+  }
+  .status-cell{padding:3px 10px;display:flex;align-items:center;border-right:1px solid var(--dp-sh);
+    box-shadow:inset 1px 0 0 var(--dp-hi);font-size:11px;}
+  .status-cell b{color:var(--dp-accent);margin-right:5px;}
+  #statusSpacer{flex:1 1 auto;}
+
+  /* ---- modal --------------------------------------------------*/
+  .modal-veil{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:200;}
+  .modal-veil.show{display:flex;}
+  .modal-box{padding:0;min-width:340px;max-width:92vw;}
+  .modal-box .titlebar{background:var(--dp-accent);color:#fff;padding:5px 10px;font-weight:bold;
+    display:flex;justify-content:space-between;align-items:center;letter-spacing:.5px;}
+  .modal-box .titlebar .x{cursor:pointer;padding:0 4px;}
+  .modal-body{padding:14px;}
+  .modal-foot{padding:10px 14px;display:flex;justify-content:flex-end;gap:8px;
+    border-top:2px solid var(--dp-sh);}
+
+  /* scrollbars */
+  ::-webkit-scrollbar{width:14px;height:14px;}
+  ::-webkit-scrollbar-track{background:#777;}
+  ::-webkit-scrollbar-thumb{background:var(--dp-face);border:2px solid var(--dp-sh-dk);}
+  .hidden{display:none !important;}
+  .toolopt{font-size:11px;}
+  .toolopt .btn-row{margin-top:3px;}
+  .swap-hint{font-size:10px;opacity:.7;margin-top:4px;line-height:1.3;}
+
+  /* ---- frame strip --------------------------------------------*/
+  #frameStrip{display:flex;gap:4px;overflow-x:auto;padding:5px;min-height:54px;align-items:center;}
+  .frame-cell{position:relative;flex:0 0 auto;cursor:pointer;padding:2px;background:var(--dp-face);
+    border-top:2px solid var(--dp-hi);border-left:2px solid var(--dp-hi);
+    border-right:2px solid var(--dp-sh-dk);border-bottom:2px solid var(--dp-sh-dk);}
+  .frame-cell.sel{outline:2px solid #ffcc00;outline-offset:-1px;}
+  .frame-thumb{display:block;width:32px;height:48px;image-rendering:pixelated;background:#000;}
+  .frame-num{position:absolute;bottom:1px;right:2px;font-size:9px;font-weight:bold;color:#fff;
+    text-shadow:0 0 2px #000,0 0 2px #000;}
+  .opt-grid{margin-top:8px;border-top:1px solid var(--dp-sh);padding-top:6px;}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ============ MENU BAR ============ -->
+  <div id="menubar">
+    <div class="menu-title menu-brand" data-menu="brand">Color&nbsp;Spritx
+      <div class="dropdown-panel bevel-out" id="menu-brand">
+        <div class="menu-item" data-act="about"><span>About Color Spritx</span></div>
+        <div class="menu-item" data-act="shortcuts"><span>Keyboard Shortcuts</span></div>
+      </div>
+    </div>
+    <div class="menu-title" data-menu="file">File
+      <div class="dropdown-panel bevel-out" id="menu-file">
+        <div class="menu-item" data-act="new"><span>New Image…</span><span class="sc">Ctrl+N</span></div>
+        <div class="menu-item" data-act="newsheet"><span>New Spritesheet…</span></div>
+        <div class="menu-sep"></div>
+        <div class="menu-item" data-act="loadjson"><span>Open Project (JSON)…</span></div>
+        <div class="menu-item" data-act="loadpng"><span>Import PNG…</span></div>
+        <div class="menu-sep"></div>
+        <div class="menu-item" data-act="savejson"><span>Save Project (JSON)</span></div>
+        <div class="menu-item" data-act="savepng"><span>Export PNG</span></div>
+        <div class="menu-sep"></div>
+        <div class="menu-item" data-act="savebin"><span>Export CoCo Binary (raw)</span></div>
+        <div class="menu-item" data-act="savebinloadm"><span>Export CoCo Binary (LOADM)</span></div>
+        <div class="menu-item" data-act="savefcb"><span>Export 6809 FCB Source…</span></div>
+        <div class="menu-item" data-act="savebasic"><span>Export BASIC Loader (fast, RLE+ML)…</span></div>
+        <div class="menu-item" data-act="savebasicslow"><span>Export BASIC Loader (simple DATA)…</span></div>
+        <div class="menu-sep"></div>
+        <div class="menu-item" data-act="saveanim"><span>Export Animation Strip…</span></div>
+      </div>
+    </div>
+    <div class="menu-title" data-menu="edit">Edit
+      <div class="dropdown-panel bevel-out" id="menu-edit">
+        <div class="menu-item" data-act="undo"><span>Undo</span><span class="sc">Ctrl+Z</span></div>
+        <div class="menu-item" data-act="redo"><span>Redo</span><span class="sc">Ctrl+Y</span></div>
+        <div class="menu-sep"></div>
+        <div class="menu-item" data-act="cut"><span>Cut</span><span class="sc">Ctrl+X</span></div>
+        <div class="menu-item" data-act="copy"><span>Copy</span><span class="sc">Ctrl+C</span></div>
+        <div class="menu-item" data-act="paste"><span>Paste</span><span class="sc">Ctrl+V</span></div>
+        <div class="menu-sep"></div>
+        <div class="menu-item" data-act="selall"><span>Select All</span><span class="sc">Ctrl+A</span></div>
+        <div class="menu-item" data-act="selnone"><span>Deselect</span><span class="sc">Esc</span></div>
+        <div class="menu-item" data-act="crop"><span>Crop to Selection</span></div>
+      </div>
+    </div>
+    <div class="menu-title" data-menu="sel">Selection
+      <div class="dropdown-panel bevel-out" id="menu-sel">
+        <div class="menu-item" data-act="rotcw"><span>Rotate 90° CW</span></div>
+        <div class="menu-item" data-act="rotccw"><span>Rotate 90° CCW</span></div>
+        <div class="menu-item" data-act="fliph"><span>Flip Horizontal</span></div>
+        <div class="menu-item" data-act="flipv"><span>Flip Vertical</span></div>
+        <div class="menu-sep"></div>
+        <div class="menu-item" data-act="scale2"><span>Scale Selected x2</span></div>
+        <div class="menu-item" data-act="scale3"><span>Scale Selected x4</span></div>
+        <div class="menu-sep"></div>
+        <div class="menu-item" data-act="stamp"><span>Stamp / Commit Float</span></div>
+      </div>
+    </div>
+    <div class="menu-title" data-menu="layer">Layer
+      <div class="dropdown-panel bevel-out" id="menu-layer">
+        <div class="menu-item" data-act="newlayer"><span>New Layer</span></div>
+        <div class="menu-item" data-act="duplayer"><span>Duplicate Layer</span></div>
+        <div class="menu-item" data-act="dellayer"><span>Delete Layer</span></div>
+        <div class="menu-item" data-act="mergedown"><span>Merge Down</span></div>
+        <div class="menu-sep"></div>
+        <div class="menu-item" data-act="clearlayer"><span>Clear Layer</span></div>
+        <div class="menu-item" data-act="filllayer"><span>Fill Layer (FG)</span></div>
+        <div class="menu-sep"></div>
+        <div class="menu-item" data-act="nudgeL"><span>Nudge Left</span></div>
+        <div class="menu-item" data-act="nudgeR"><span>Nudge Right</span></div>
+        <div class="menu-item" data-act="nudgeU"><span>Nudge Up</span></div>
+        <div class="menu-item" data-act="nudgeD"><span>Nudge Down</span></div>
+      </div>
+    </div>
+    <div class="menu-title" data-menu="frame">Frame
+      <div class="dropdown-panel bevel-out" id="menu-frame">
+        <div class="menu-item" data-act="newframe"><span>New Frame</span></div>
+        <div class="menu-item" data-act="dupframe"><span>Duplicate Frame</span></div>
+        <div class="menu-item" data-act="delframe"><span>Delete Frame</span></div>
+        <div class="menu-sep"></div>
+        <div class="menu-item" data-act="prevframe"><span>Previous Frame</span><span class="sc">,</span></div>
+        <div class="menu-item" data-act="nextframe"><span>Next Frame</span><span class="sc">.</span></div>
+        <div class="menu-sep"></div>
+        <div class="menu-item" data-act="play"><span>Play / Stop</span><span class="sc">Space</span></div>
+        <div class="menu-item" data-act="toggleonion"><span>Onion Skin On/Off</span></div>
+      </div>
+    </div>
+    <div class="menu-title" data-menu="view">View
+      <div class="dropdown-panel bevel-out" id="menu-view">
+        <div class="menu-item" data-act="zoomin"><span>Zoom In</span><span class="sc">+</span></div>
+        <div class="menu-item" data-act="zoomout"><span>Zoom Out</span><span class="sc">−</span></div>
+        <div class="menu-item" data-act="zoomfit"><span>Zoom to Fit</span></div>
+        <div class="menu-sep"></div>
+        <div class="menu-item" data-act="togglegrid"><span>Pixel Grid On/Off</span><span class="sc">G</span></div>
+        <div class="menu-item" data-act="toggletiles"><span>Tile Grid On/Off</span></div>
+        <div class="menu-sep"></div>
+        <div class="menu-item" data-act="tilecolor"><span>Tile Line Color…</span></div>
+        <div class="menu-item" data-act="snaptile"><span>Snap to Tile Grid</span></div>
+        <div class="menu-item" data-act="switchpal"><span>Switch Palettes</span></div>
+        <div class="menu-sep"></div>
+        <div class="menu-item" data-act="togglewide"><span>Fit to TV Screen (4:3)</span></div>
+        <div class="menu-sep"></div>
+        <div class="menu-item" data-act="histogram"><span>Palette Usage…</span></div>
+      </div>
+    </div>
+    <div class="menu-title" data-menu="type">Type
+      <div class="dropdown-panel bevel-out" id="menu-type" style="min-width:240px;">
+        <div style="padding:6px 10px;">
+          <label class="fld">Font
+            <select id="typeFont">
+              <option value="Pixelify Sans">Pixelify Sans</option>
+              <option value="Doto">Doto</option>
+              <option value="Tiny5">Tiny5</option>
+              <option value="Micro 5">Micro 5</option>
+              <option value="Jacquarda Bastarda 9">Jacquarda Bastarda 9</option>
+              <option value="Bytesized">Bytesized</option>
+            </select>
+          </label>
+          <label class="fld">Size (px)
+            <input type="number" id="typeSize" value="16" min="5" max="96">
+          </label>
+          <div class="swap-hint" style="margin-top:4px;">Pick the Type tool, click on the canvas, then type. FG is the text colour. No anti-aliasing — pixels are hard-thresholded. Enter commits.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MAIN ============ -->
+  <div id="main">
+
+    <!-- TOOLBOX -->
+    <div id="toolbox" class="bevel-out">
+      <div class="tool-grid" id="toolGrid"><!-- tools injected --></div>
+      <div id="colorSlots"><!-- FG/BG injected --></div>
+      <div class="btn-row">
+        <button class="dpbtn" id="btnZoomOut" title="Zoom out">−</button>
+        <button class="dpbtn" id="btnZoomIn" title="Zoom in">+</button>
+      </div>
+      <div class="tb-label" id="zoomLabel">8×</div>
+      <div class="btn-row">
+        <button class="dpbtn" id="btnUndo" title="Undo">↶</button>
+        <button class="dpbtn" id="btnRedo" title="Redo">↷</button>
+      </div>
+    </div>
+
+    <!-- CANVAS STAGE -->
+    <div id="stagewrap">
+      <div id="stage" class="bevel-in">
+        <div id="canvasHolder">
+          <canvas id="drawCanvas"></canvas>
+          <canvas id="overlayCanvas"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div id="rightcol">
+
+      <div class="panel bevel-out" id="panel-palette" data-title="PALETTE">
+        <h6><span class="h6-title">PALETTE — <span id="palSetName">Set 0</span></span></h6>
+        <div class="panel-body">
+          <div id="palette"></div>
+          <div class="btn-row" style="margin-top:6px;">
+            <button class="dpbtn" id="btnSwapSet">⇄ Flip Color Set</button>
+          </div>
+          <div class="swap-hint">Click a colour to load it into the active FG/BG slot (in the toolbox). The picture re-tints when you flip color sets.</div>
+        </div>
+      </div>
+
+      <div class="panel bevel-out" id="panel-patterns" data-title="PATTERNS">
+        <h6><span class="h6-title">PATTERNS</span></h6>
+        <div class="panel-body">
+          <div id="patternGrid"></div>
+          <div class="swap-hint">Used by the Dithering tools to blend FG→BG. Click to select.</div>
+        </div>
+      </div>
+
+      <div class="panel bevel-out" id="panel-preview" data-title="PREVIEW">
+        <h6><span class="h6-title">PREVIEW</span></h6>
+        <div class="panel-body">
+          <div id="previewWrap" class="well"><canvas id="previewCanvas"></canvas></div>
+          <div class="fld"><span>Preview zoom</span>
+            <span class="stepper">
+              <button class="dpbtn" id="prevZoomDn" title="Smaller">−</button>
+              <span id="prevZoomVal">1×</span>
+              <button class="dpbtn" id="prevZoomUp" title="Larger">+</button>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel bevel-out toolopt" id="panel-tool" data-title="TOOL OPTIONS">
+        <h6><span class="h6-title">TOOL OPTIONS</span></h6>
+        <div class="panel-body">
+          <div id="toolHelp" class="swap-hint" style="margin-bottom:6px;"></div>
+          <div id="toolOptBody"></div>
+        </div>
+      </div>
+
+      <div class="panel bevel-out hidden" id="panel-sprites" data-title="SPRITES">
+        <h6><span class="h6-title">SPRITES — <span id="spriteInfo">0</span></span></h6>
+        <div class="panel-body">
+          <div id="spriteList" class="well" style="max-height:220px;overflow-y:auto;"></div>
+          <div class="btn-row" style="margin-top:6px;">
+            <button class="dpbtn" id="btnSprClear" title="Clear selected sprite">Clear</button>
+            <button class="dpbtn" id="btnSprRotCW" title="Rotate selected sprite 90° CW">⟳</button>
+            <button class="dpbtn" id="btnSprFlipH" title="Flip selected sprite horizontal">⇆</button>
+            <button class="dpbtn" id="btnSprFlipV" title="Flip selected sprite vertical">⇅</button>
+          </div>
+          <div class="btn-row" style="margin-top:4px;">
+            <button class="dpbtn" id="btnSprMirH" title="Mirror left half onto right">Mirror H</button>
+            <button class="dpbtn" id="btnSprMirV" title="Mirror top half onto bottom">Mirror V</button>
+          </div>
+          <label class="fld" style="margin-top:6px;">Copy this sprite to:
+            <select id="sprCopyTarget"></select>
+          </label>
+          <button class="dpbtn" id="btnSprCopy" style="width:100%;margin-top:4px;">Copy Sprite →</button>
+          <label class="fld" style="margin-top:6px;"><span><input type="checkbox" id="shExportNames" checked> Include sprite names in FCB/BASIC export</span></label>
+        </div>
+      </div>
+
+      <div class="panel bevel-out" id="panel-frames" data-title="FRAMES">
+        <h6><span class="h6-title">FRAMES — <span id="frameInfo">1/1</span></span></h6>
+        <div class="panel-body">
+          <div id="frameStrip" class="well"></div>
+          <div class="btn-row" style="margin-top:6px;">
+            <button class="dpbtn" id="btnNewFrame" title="New frame">＋</button>
+            <button class="dpbtn" id="btnDupFrame" title="Duplicate frame">⧉</button>
+            <button class="dpbtn" id="btnDelFrame" title="Delete frame">🗑</button>
+            <button class="dpbtn" id="btnPlay" title="Play / stop">▶ Play</button>
+          </div>
+          <label class="fld" style="margin-top:6px;">FPS <input type="number" id="fpsInput" value="8" min="1" max="30"></label>
+          <label class="fld"><span><input type="checkbox" id="chkOnion"> Onion skin (prev/next ghost)</span></label>
+        </div>
+      </div>
+
+      <div class="panel bevel-out" id="panel-layers" data-title="LAYERS">
+        <h6><span class="h6-title">LAYERS</span></h6>
+        <div class="panel-body">
+          <div id="layerList"></div>
+          <div class="btn-row">
+            <button class="dpbtn" data-act="newlayer">New</button>
+            <button class="dpbtn" data-act="duplayer">Dup</button>
+            <button class="dpbtn" data-act="dellayer">Del</button>
+            <button class="dpbtn" data-act="mergedown">Merge↓</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel bevel-out" id="panel-grid" data-title="GRID / DISPLAY">
+        <h6><span class="h6-title">GRID / DISPLAY</span></h6>
+        <div class="panel-body">
+          <label class="fld"><span><input type="checkbox" id="chkPixGrid"> Pixel grid</span></label>
+          <label class="fld"><span><input type="checkbox" id="chkTileGrid"> Tile grid</span></label>
+          <label class="fld">Tile W <input type="number" id="tileW" value="16" min="1" max="128"></label>
+          <label class="fld">Tile H <input type="number" id="tileH" value="16" min="1" max="192"></label>
+          <label class="fld">Grid color <input type="color" id="gridColor" value="#ff00ff"></label>
+          <label class="fld"><span><input type="checkbox" id="chkSnap"> Snap select to tiles</span></label>
+          <div class="menu-sep"></div>
+          <label class="fld"><span><input type="checkbox" id="chkWide"> Fit to TV screen (4:3)</span></label>
+          <div class="btn-row" style="margin-top:6px;">
+            <button class="dpbtn" id="btnHist">Palette Usage…</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- floating-panel host -->
+  <div id="floatLayer"></div>
+
+  <!-- ============ STATUS BAR ============ -->
+  <div id="statusbar" class="bevel-out">
+    <div class="status-cell"><b>MODE</b><span id="stMode">PMODE 3</span></div>
+    <div class="status-cell"><b>SIZE</b><span id="stSize">128×192</span></div>
+    <div class="status-cell"><b>BYTES</b><span id="stBytes">6144</span></div>
+    <div class="status-cell"><b>POS</b><span id="stPos">—,—</span></div>
+    <div class="status-cell"><b>COLOR</b><span id="stColor">1</span></div>
+    <div id="statusSpacer"></div>
+    <div class="status-cell"><b>FRAME</b><span id="stFrame">1/1</span></div>
+    <div class="status-cell"><b>SEL</b><span id="stSel">none</span></div>
+    <div class="status-cell"><b>LAYER</b><span id="stLayer">1/1</span></div>
+  </div>
+</div>
+
+<!-- hidden file inputs -->
+<input type="file" id="fileJson" accept=".json,application/json" class="hidden">
+<input type="file" id="filePng" accept="image/png,image/*" class="hidden">
+
+<!-- ============ NEW IMAGE MODAL ============ -->
+<div class="modal-veil" id="newModal">
+  <div class="modal-box bevel-out">
+    <div class="titlebar"><span>New Image</span><span class="x" data-close="newModal">✕</span></div>
+    <div class="modal-body">
+      <label class="fld">Graphics mode
+        <select id="newMode">
+          <option value="3" selected>PMODE 3 — G6C — 128×192</option>
+          <option value="1">PMODE 1 — G3C — 128×96</option>
+        </select>
+      </label>
+      <label class="fld">Color set
+        <select id="newSet">
+          <option value="0" selected>Set 0 — Green / Yellow / Blue / Red</option>
+          <option value="1">Set 1 — Buff / Cyan / Magenta / Orange</option>
+        </select>
+      </label>
+      <hr>
+      <label class="fld">Tile width <input type="number" id="newTileW" value="16" min="1" max="128"></label>
+      <label class="fld">Tile height <input type="number" id="newTileH" value="16" min="1" max="192"></label>
+      <label class="fld"><span><input type="checkbox" id="newShowGrid"> Show tile grid</span></label>
+    </div>
+    <div class="modal-foot">
+      <button class="dpbtn" data-close="newModal">Cancel</button>
+      <button class="dpbtn" id="newCreate">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ NEW SPRITESHEET MODAL ============ -->
+<div class="modal-veil" id="sheetModal">
+  <div class="modal-box bevel-out">
+    <div class="titlebar"><span>New Spritesheet</span><span class="x" data-close="sheetModal">✕</span></div>
+    <div class="modal-body">
+      <label class="fld">Graphics mode
+        <select id="shMode">
+          <option value="3" selected>PMODE 3 — 128×192</option>
+          <option value="1">PMODE 1 — 128×96</option>
+        </select>
+      </label>
+      <label class="fld">Color set
+        <select id="shSet">
+          <option value="0" selected>Set 0 — Green / Yellow / Blue / Red</option>
+          <option value="1">Set 1 — Buff / Cyan / Magenta / Orange</option>
+        </select>
+      </label>
+      <hr>
+      <label class="fld">Sprite width (px) <input type="number" id="shTileW" value="16" min="1" max="128"></label>
+      <label class="fld">Sprite height (px) <input type="number" id="shTileH" value="16" min="1" max="192"></label>
+      <label class="fld">Columns (sprites across) <input type="number" id="shCols" value="6" min="1" max="128"></label>
+      <label class="fld">Rows (sprites down) <input type="number" id="shRows" value="6" min="1" max="192"></label>
+      <div id="shInfo" class="swap-hint"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="dpbtn" data-close="sheetModal">Cancel</button>
+      <button class="dpbtn" id="shCreate">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ GENERIC INFO MODAL ============ -->
+<div class="modal-veil" id="infoModal">
+  <div class="modal-box bevel-out">
+    <div class="titlebar"><span id="infoTitle">Info</span><span class="x" data-close="infoModal">✕</span></div>
+    <div class="modal-body" id="infoBody"></div>
+    <div class="modal-foot"><button class="dpbtn" data-close="infoModal">OK</button></div>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   Color Spritx — PMODE 1 / PMODE 3 pixel editor for the TRS-80 CoCo
+   Single-file engine. Pixels are stored as palette indices 0..3.
+   Index 0 == transparent for layer compositing & treated as the
+   "background" colour for binary export (pixel bits 00).
+   ===================================================================== */
+"use strict";
+
+/* ---------- CoCo hardware specs (from VDG reference) -----------------
+   PMODE 3 = G6C : 128 x 192, 4 px/byte, 4 colours, buffer 6144 bytes
+   PMODE 1 = G3C : 128 x 96 , 4 px/byte, 4 colours, buffer 3072 bytes
+   A CoCo dot is a perfect SQUARE. Lower-res modes simply use bigger
+   square dots, so the editor draws 1:1 by default. The optional
+   "Fit to TV Screen" view stretches the picture to the physical 4:3
+   raster (PMODE3 dots x2 wide; PMODE1 dots x2 wide & x2 tall) purely
+   as a preview of how it fills the screen.
+--------------------------------------------------------------------- */
+/* tvX / tvY = how many display units one dot occupies in "Fit to TV" view,
+   so every mode fills the same ~256x192 (4:3) screen:
+     PMODE 3 (128x192): dots 2 wide x 1 tall
+     PMODE 1 (128x96) : dots 2 wide x 2 tall
+   In square view both are 1 (a dot is a perfect square). */
+const MODES = {
+  1: { name:"PMODE 1", vdg:"G3C", w:128, h:96,  bytes:3072, tvX:2, tvY:2 },
+  3: { name:"PMODE 3", vdg:"G6C", w:128, h:192, bytes:6144, tvX:2, tvY:1 },
+};
+
+/* Two CoCo colour sets. Index order matches the 2-bit pixel value
+   (00,01,10,11) used in the packed binary.
+   RGB values from the MAME MC6847 palette (M6847_RGB). */
+const PALETTES = {
+  0: ["#00ff00", "#ffff00", "#0000ff", "#ff0000"],   // Green Yellow Blue Red
+  1: ["#ffffff", "#00ffff", "#ff00ff", "#ff8000"],   // Buff  Cyan   Magenta Orange
+};
+const PAL_NAMES = {
+  0: ["Green","Yellow","Blue","Red"],
+  1: ["Buff","Cyan","Magenta","Orange"],
+};
+
+/* ---------- application state ---------------------------------------- */
+const S = {
+  mode: 3,
+  set: 0,
+  w: 128, h: 192,
+  zoom: 8,
+  // ---- ANIMATION FRAMES ----
+  // frames[] = { layers:[{id,name,visible,data}], active:int, dur:ms }
+  // S.layers / S.active are LIVE references into frames[curFrame].
+  frames: [],
+  curFrame: 0,
+  layers: [],          // == frames[curFrame].layers
+  active: 0,           // active layer index within current frame
+  playing: false,
+  playTimer: null,
+  fps: 8,
+  onion: false,        // onion-skin previous/next frame
+  fg: 1, bg: 0,        // palette indices
+  activeSlot: "fg",    // which swatch the palette click edits (Photoshop-style)
+  tool: "pencil",
+  brushSize: 1,
+  dither: false,       // dithering brush (FG/BG checker)
+  showPixGrid: false,
+  showTileGrid: false,
+  tileW: 16, tileH: 16,
+  gridColor: "#ff00ff",
+  snap: false,
+  symX: false,
+  symY: false,         // Y mirror (with symX -> 4-way kaleidoscope)
+  wideView: true,      // 4:3 view ON by default (stretch to fill TV screen)
+  prevZoom: 1,
+  shift: false,        // Shift held -> constrain shapes
+  // selection: rectangular {x,y,w,h} in image space, or null
+  sel: null,
+  // floating selection being moved/pasted: {x,y,w,h,data:Uint8Array}
+  float: null,
+  clipboard: null,     // {w,h,data}
+  // interaction scratch
+  drag: null,
+  // history
+  undo: [], redo: [],
+  // ---- SPRITESHEET mode ----
+  sheet: null,         // null = normal mode; else {tileW,tileH,cols,rows,sprites:[{name}],sel:int}
+  // ---- TYPE tool ----
+  font: "Pixelify Sans",
+  fontSize: 16,
+  // ---- DITHER tools ----
+  ditherDir: 0,        // degrees, 0=L->R, increments of 45
+  pattern: 0,          // index into PATTERNS
+  usePattern: false,   // fill tools (brush/bucket/frect/fellipse) use pattern vs FG
+  // ---- SPRAY ----
+  sprayDensity: 30,    // pixels per spray tick
+  spraySpeed: 60,      // ms between ticks
+  // ---- per-tool brush sizes (line/shape default 1, spray default 3) ----
+  brushSizes: { pencil:1, brush:1, erase:1, line:1, shape:1, spray:3 },
+  borderThickness: 1,  // outline thickness for empty box/circle
+  // ---- PAN ----
+  panScroll: null,
+};
+let nextLayerId = 1;
+let nextFrameId = 1;
+
+/* ---------- DOM refs -------------------------------------------------- */
+const $ = sel => document.querySelector(sel);
+const drawCanvas = $("#drawCanvas");
+const overlay    = $("#overlayCanvas");
+const dctx = drawCanvas.getContext("2d");
+const octx = overlay.getContext("2d");
+const holder = $("#canvasHolder");
+const preview = $("#previewCanvas");
+const pctx = preview.getContext("2d");
+
+/* ---------- small helpers -------------------------------------------- */
+const clamp = (v,a,b)=>v<a?a:v>b?b:v;
+function newLayerData(){ return new Uint8Array(S.w*S.h); } // 0 = transparent
+function makeLayer(name){
+  return { id:nextLayerId++, name:name||("Layer "+nextLayerId), visible:true, data:newLayerData() };
+}
+
+/* ---------- FRAME helpers ------------------------------------------- */
+function makeFrame(layers){
+  return { id:nextFrameId++, layers:layers||[makeLayer("Layer 1")], active:0, dur:Math.round(1000/S.fps) };
+}
+/* point S.layers/S.active at the current frame */
+function syncFrame(){
+  const f=S.frames[S.curFrame];
+  S.layers=f.layers; S.active=f.active;
+}
+/* write S.active back into the frame record (call before switching) */
+function stowFrame(){
+  if(S.frames[S.curFrame]) S.frames[S.curFrame].active=S.active;
+}
+function gotoFrame(i){
+  if(i<0||i>=S.frames.length) return;
+  commitFloat(); stowFrame();
+  S.curFrame=i; syncFrame();
+  S.sel=null; S.float=null;
+  buildLayerList(); buildFrameStrip(); render(); updateStatus();
+}
+function activeLayer(){ return S.layers[S.active]; }
+function idx(x,y){ return y*S.w + x; }
+function inBounds(x,y){ return x>=0 && y>=0 && x<S.w && y<S.h; }
+
+/* hex -> [r,g,b] */
+function hex2rgb(h){
+  h=h.replace("#","");
+  return [parseInt(h.substr(0,2),16),parseInt(h.substr(2,2),16),parseInt(h.substr(4,2),16)];
+}
+
+/* =====================================================================
+   COMPOSITING + RENDER
+   The composite returns a Uint8Array of palette indices, with 255 used
+   as "no pixel here" (fully transparent through all layers).
+   ===================================================================== */
+function compositeFrame(frame){
+  // composite a specific frame's layers -> Uint8Array (255 = empty)
+  const out=new Uint8Array(S.w*S.h).fill(255);
+  for(const L of frame.layers){
+    if(!L.visible) continue;
+    const d=L.data;
+    for(let i=0;i<d.length;i++) if(d[i]!==0) out[i]=d[i];
+  }
+  return out;
+}
+function composite(includeFloat=true){
+  const out = new Uint8Array(S.w*S.h).fill(255);
+  for(const L of S.layers){
+    if(!L.visible) continue;
+    const d=L.data;
+    for(let i=0;i<d.length;i++){
+      if(d[i]!==0) out[i]=d[i];   // 0 is transparent, others overwrite
+    }
+  }
+  // anything still 255 -> show as index 0 (background colour) on screen
+  // floating selection sits on top
+  if(includeFloat && S.float){
+    const f=S.float;
+    for(let yy=0;yy<f.h;yy++){
+      for(let xx=0;xx<f.w;xx++){
+        const v=f.data[yy*f.w+xx];
+        if(v===0) continue; // transparent within float
+        const gx=f.x+xx, gy=f.y+yy;
+        if(inBounds(gx,gy)) out[idx(gx,gy)] = v;
+      }
+    }
+  }
+  return out;
+}
+
+/* Convert an index buffer (0..3, 255=empty->0) to a sharp RGBA ImageData. */
+function indicesToImage(ctx,comp,pal){
+  const img=ctx.createImageData(S.w,S.h);
+  for(let i=0;i<comp.length;i++){
+    let v=comp[i]; if(v===255) v=0;
+    const c=pal[v];
+    img.data[i*4]=c[0]; img.data[i*4+1]=c[1]; img.data[i*4+2]=c[2]; img.data[i*4+3]=255;
+  }
+  return img;
+}
+
+/* Display zoom per axis. Square view: dots are 1:1 (perfect squares),
+   so x and y both use S.zoom. "Fit to TV" view (S.wideView): each dot is
+   stretched by the mode's tvX/tvY so the picture fills the 4:3 screen
+   (PMODE3 dots 2x wide; PMODE1 dots 2x wide and 2x tall). The backing
+   buffer stays native-res; only the on-screen stretch changes. */
+function zoomX(){ return S.zoom * (S.wideView ? MODES[S.mode].tvX : 1); }
+function zoomY(){ return S.zoom * (S.wideView ? MODES[S.mode].tvY : 1); }
+
+/* Render main canvas at current zoom.
+   We draw at FULL display resolution (S.w*zx x S.h*zy) using nearest-
+   neighbour drawImage, instead of CSS-upscaling a tiny buffer. CSS
+   upscaling of a 128-wide buffer caused uneven column widths (the first
+   column looked thinner) due to sub-pixel rounding; full-res drawing
+   makes every dot exactly zx x zy device pixels. */
+let _nativeCanvas=null, _nctx=null;
+function render(){
+  const zx=zoomX(), zy=zoomY();
+  const W=S.w*zx, H=S.h*zy;
+  // size the visible canvas to full resolution; no CSS stretch
+  drawCanvas.width=W; drawCanvas.height=H;
+  drawCanvas.style.width=W+"px"; drawCanvas.style.height=H+"px";
+  overlay.width=W; overlay.height=H;
+  overlay.style.width=W+"px"; overlay.style.height=H+"px";
+  holder.style.width=W+"px"; holder.style.height=H+"px";
+
+  const comp=composite();
+  const pal=PALETTES[S.set].map(hex2rgb);
+  // build native-res image on a scratch canvas, then scale up crisply
+  if(!_nativeCanvas){ _nativeCanvas=document.createElement("canvas"); _nctx=_nativeCanvas.getContext("2d"); }
+  _nativeCanvas.width=S.w; _nativeCanvas.height=S.h;
+  const img=indicesToImage(_nctx,comp,pal);
+  _nctx.putImageData(img,0,0);
+  dctx.imageSmoothingEnabled=false;
+  dctx.clearRect(0,0,W,H);
+  dctx.drawImage(_nativeCanvas,0,0,S.w,S.h,0,0,W,H);
+  drawOverlay();
+  renderPreview(comp,pal);
+}
+
+/* overlay: grids, selection marquee, float outline */
+function drawOverlay(){
+  const zx=zoomX(), zy=zoomY();
+  octx.clearRect(0,0,overlay.width,overlay.height);
+  // onion skin — ghost previous (red) and next (green) frame
+  if(S.onion && !S.playing && S.frames.length>1){
+    const pal=PALETTES[S.set].map(hex2rgb);
+    const ghosts=[];
+    if(S.curFrame>0) ghosts.push({f:S.frames[S.curFrame-1],tint:[255,80,80]});
+    if(S.curFrame<S.frames.length-1) ghosts.push({f:S.frames[S.curFrame+1],tint:[80,255,120]});
+    octx.save(); octx.globalAlpha=0.30;
+    for(const g of ghosts){
+      const c=compositeFrame(g.f);
+      for(let y=0;y<S.h;y++)for(let x=0;x<S.w;x++){
+        const v=c[idx(x,y)];
+        if(v===255||v===0) continue; // skip empties
+        octx.fillStyle=`rgb(${g.tint[0]},${g.tint[1]},${g.tint[2]})`;
+        octx.fillRect(x*zx,y*zy,zx,zy);
+      }
+    }
+    octx.restore();
+  }
+  // pixel grid
+  if(S.showPixGrid && S.zoom>=4){
+    octx.strokeStyle="rgba(0,0,0,.28)";
+    octx.lineWidth=1;
+    octx.beginPath();
+    for(let x=0;x<=S.w;x++){octx.moveTo(x*zx+.5,0);octx.lineTo(x*zx+.5,S.h*zy);}
+    for(let y=0;y<=S.h;y++){octx.moveTo(0,y*zy+.5);octx.lineTo(S.w*zx,y*zy+.5);}
+    octx.stroke();
+  }
+  // tile grid
+  if(S.showTileGrid){
+    octx.strokeStyle=S.gridColor;
+    octx.lineWidth=1;
+    octx.beginPath();
+    for(let x=0;x<=S.w;x+=S.tileW){octx.moveTo(x*zx+.5,0);octx.lineTo(x*zx+.5,S.h*zy);}
+    for(let y=0;y<=S.h;y+=S.tileH){octx.moveTo(0,y*zy+.5);octx.lineTo(S.w*zx,y*zy+.5);}
+    octx.stroke();
+  }
+  // selected-sprite flashing border (spritesheet mode)
+  if(S.sheet){
+    const r=spriteRect(S.sheet.sel);
+    octx.save();
+    octx.lineWidth=3;
+    octx.strokeStyle=flashColor();
+    octx.strokeRect(r.x*zx+1.5,r.y*zy+1.5,r.w*zx-3,r.h*zy-3);
+    octx.restore();
+  }
+  // selection marquee (marching-ants style dashes)
+  const sel = S.float ? {x:S.float.x,y:S.float.y,w:S.float.w,h:S.float.h} : S.sel;
+  if(sel){
+    octx.save();
+    octx.lineWidth=1;
+    octx.setLineDash([4,3]);
+    octx.strokeStyle="#000"; octx.strokeRect(sel.x*zx+.5,sel.y*zy+.5,sel.w*zx,sel.h*zy);
+    octx.lineDashOffset=4;
+    octx.strokeStyle="#fff"; octx.strokeRect(sel.x*zx+.5,sel.y*zy+.5,sel.w*zx,sel.h*zy);
+    octx.restore();
+    // crop tool: draw drag handles + hint
+    if(S.tool==="crop" && !S.float){
+      octx.save(); octx.setLineDash([]); octx.fillStyle="#ffcc00"; octx.strokeStyle="#000";
+      const hs=6;
+      const xs=[sel.x*zx, (sel.x+sel.w/2)*zx, (sel.x+sel.w)*zx];
+      const ys=[sel.y*zy, (sel.y+sel.h/2)*zy, (sel.y+sel.h)*zy];
+      for(const hx of xs)for(const hy of ys){
+        octx.fillRect(hx-hs/2,hy-hs/2,hs,hs);
+        octx.strokeRect(hx-hs/2+.5,hy-hs/2+.5,hs,hs);
+      }
+      octx.restore();
+    }
+  }
+}
+
+/* preview window — mirrors the editing canvas: square dots when the
+   canvas is in square mode, or stretched to the 4:3 TV shape when in
+   "Fit to TV" mode. The preview scales to fit the panel width while
+   preserving the correct aspect, so the shape is always visible. The
+   prevZoom step lets the user enlarge it (it will scroll if bigger
+   than the panel). */
+function renderPreview(comp,pal){
+  const pz=S.prevZoom;
+  const tvx=S.wideView?MODES[S.mode].tvX:1, tvy=S.wideView?MODES[S.mode].tvY:1;
+  // backing buffer is always native res; CSS does the stretch
+  preview.width=S.w; preview.height=S.h;
+  // base on-screen size: aspect-correct, scaled so 1 "prevZoom unit"
+  // ~= the panel-friendly base. Width drives the layout.
+  const baseW = S.w * pz * tvx;
+  const baseH = S.h * pz * tvy;
+  preview.style.width = baseW+"px";
+  preview.style.height = baseH+"px";
+  const img=pctx.createImageData(S.w,S.h);
+  for(let i=0;i<comp.length;i++){
+    let v=comp[i]; if(v===255) v=0;
+    const c=pal[v];
+    img.data[i*4]=c[0];img.data[i*4+1]=c[1];img.data[i*4+2]=c[2];img.data[i*4+3]=255;
+  }
+  pctx.putImageData(img,0,0);
+}
+/* =====================================================================
+   HISTORY (full layer-stack snapshots — simple & robust)
+   ===================================================================== */
+function snapshot(){
+  return {
+    w:S.w,h:S.h,mode:S.mode,
+    frame:S.curFrame,
+    layers:S.layers.map(L=>({id:L.id,name:L.name,visible:L.visible,data:L.data.slice()})),
+    active:S.active,
+  };
+}
+function pushUndo(){
+  S.undo.push(snapshot());
+  if(S.undo.length>60) S.undo.shift();
+  S.redo.length=0;
+  refreshHistoryButtons();
+}
+function restore(snap){
+  S.w=snap.w; S.h=snap.h; S.mode=snap.mode;
+  const layers=snap.layers.map(L=>({id:L.id,name:L.name,visible:L.visible,data:L.data.slice()}));
+  const fi=Math.min(snap.frame??S.curFrame, S.frames.length-1);
+  S.curFrame=fi;
+  S.frames[fi].layers=layers;
+  S.frames[fi].active=Math.min(snap.active,layers.length-1);
+  syncFrame();
+}
+function undo(){
+  if(!S.undo.length) return;
+  commitFloat(); // bake any float first
+  S.redo.push(snapshot());
+  restore(S.undo.pop());
+  S.sel=null; S.float=null;
+  buildLayerList(); buildFrameStrip(); render(); updateStatus(); refreshHistoryButtons();
+}
+function redo(){
+  if(!S.redo.length) return;
+  S.undo.push(snapshot());
+  restore(S.redo.pop());
+  S.sel=null; S.float=null;
+  buildLayerList(); buildFrameStrip(); render(); updateStatus(); refreshHistoryButtons();
+}
+function refreshHistoryButtons(){
+  $("#btnUndo").disabled=!S.undo.length;
+  $("#btnRedo").disabled=!S.redo.length;
+}
+
+/* =====================================================================
+   DRAWING PRIMITIVES  (operate on the active layer's data)
+   ===================================================================== */
+/* low-level: write one pixel respecting the selection mask */
+function pokePixel(x,y,v){
+  if(!inBounds(x,y)) return;
+  if(S.sel && !S.float){
+    if(x<S.sel.x||y<S.sel.y||x>=S.sel.x+S.sel.w||y>=S.sel.y+S.sel.h) return;
+  }
+  activeLayer().data[idx(x,y)]=v;
+}
+/* mirror helper: write a pixel + its symmetric partners (X / Y / 4-way) */
+function pokeMirrored(x,y,v){
+  pokePixel(x,y,v);
+  if(S.symX) pokePixel(S.w-1-x,y,v);
+  if(S.symY) pokePixel(x,S.h-1-y,v);
+  if(S.symX&&S.symY) pokePixel(S.w-1-x,S.h-1-y,v);
+}
+/* When pattern fill is active, return FG/BG based on the selected pattern
+   tile at the absolute pixel position. Otherwise just the requested colour. */
+function patColor(x,y,v){
+  if(!_patternActive) return v;
+  const t=PATTERNS[S.pattern].tile;
+  return t[((y%8+8)%8)*8 + ((x%8+8)%8)] ? S.fg : S.bg;
+}
+let _patternActive=false;  // set true while a pattern-capable tool draws
+
+/* public: paint with current brush size, honouring pattern fill. */
+function setPixel(x,y,v){
+  const r=S.brushSize-1;
+  for(let oy=-r;oy<=r;oy++)for(let ox=-r;ox<=r;ox++){
+    const px=x+ox, py=y+oy;
+    pokeMirrored(px,py,patColor(px,py,v));
+  }
+}
+function plotLine(x0,y0,x1,y1,v){
+  let dx=Math.abs(x1-x0),dy=-Math.abs(y1-y0);
+  let sx=x0<x1?1:-1, sy=y0<y1?1:-1, err=dx+dy;
+  while(true){
+    setPixel(x0,y0,v);
+    if(x0===x1&&y0===y1)break;
+    const e2=2*err;
+    if(e2>=dy){err+=dy;x0+=sx;}
+    if(e2<=dx){err+=dx;y0+=sy;}
+  }
+}
+/* stamp a pixel with a t×t brush (for outline thickness) honouring pattern */
+function pokeThick(x,y,v,t){
+  const r=t-1;
+  for(let oy=-r;oy<=r;oy++)for(let ox=-r;ox<=r;ox++){
+    const px=x+ox, py=y+oy;
+    pokeMirrored(px,py,patColor(px,py,v));
+  }
+}
+/* midpoint ellipse inscribed in the drag bounding box */
+function plotEllipse(x0,y0,x1,y1,v,fill){
+  const ax=Math.min(x0,x1),ay=Math.min(y0,y1),bx=Math.max(x0,x1),by=Math.max(y0,y1);
+  const rx=(bx-ax)/2, ry=(by-ay)/2;
+  const cx=ax+rx, cy=ay+ry;
+  if(rx<0.5||ry<0.5){ setPixel(Math.round(cx),Math.round(cy),v); return; }
+  const span=(yy,xx)=>{ // fill helper draws a horizontal run
+    for(let x=Math.round(cx-xx);x<=Math.round(cx+xx);x++) setPixel(x,yy,v);
+  };
+  const steps=Math.max(24,Math.round((rx+ry)*4));
+  if(fill){
+    for(let y=Math.ceil(cy-ry);y<=Math.floor(cy+ry);y++){
+      const t=(y-cy)/ry;
+      const xx=rx*Math.sqrt(Math.max(0,1-t*t));
+      span(y,xx);
+    }
+  }else{
+    const th=S.borderThickness||1;
+    let px=null,py=null;
+    for(let s=0;s<=steps;s++){
+      const a=(s/steps)*Math.PI*2;
+      const x=Math.round(cx+rx*Math.cos(a));
+      const y=Math.round(cy+ry*Math.sin(a));
+      if(px!==null){
+        // thick line between samples
+        let dx=Math.abs(x-px),dy=-Math.abs(y-py),sx=px<x?1:-1,sy=py<y?1:-1,err=dx+dy,X=px,Y=py;
+        while(true){ pokeThick(X,Y,v,th); if(X===x&&Y===y)break; const e2=2*err; if(e2>=dy){err+=dy;X+=sx;} if(e2<=dx){err+=dx;Y+=sy;} }
+      } else pokeThick(x,y,v,th);
+      px=x;py=y;
+    }
+  }
+}
+function rect(x0,y0,x1,y1,v,fill){
+  const ax=Math.min(x0,x1),ay=Math.min(y0,y1),bx=Math.max(x0,x1),by=Math.max(y0,y1);
+  if(fill){
+    for(let y=ay;y<=by;y++)for(let x=ax;x<=bx;x++)setPixel(x,y,v);
+  }else{
+    const th=S.borderThickness||1;
+    for(let x=ax;x<=bx;x++){pokeThick(x,ay,v,th);pokeThick(x,by,v,th);}
+    for(let y=ay;y<=by;y++){pokeThick(ax,y,v,th);pokeThick(bx,y,v,th);}
+  }
+}
+function bucketFill(x,y,v){
+  const d=activeLayer().data;
+  const target=d[idx(x,y)];
+  if(!_patternActive && target===v) return;
+  // selection-bounded fill
+  const minX=S.sel&&!S.float?S.sel.x:0, minY=S.sel&&!S.float?S.sel.y:0;
+  const maxX=S.sel&&!S.float?S.sel.x+S.sel.w-1:S.w-1;
+  const maxY=S.sel&&!S.float?S.sel.y+S.sel.h-1:S.h-1;
+  const seen=new Uint8Array(S.w*S.h);
+  const stack=[[x,y]];
+  while(stack.length){
+    const [cx,cy]=stack.pop();
+    if(cx<minX||cy<minY||cx>maxX||cy>maxY) continue;
+    const k=idx(cx,cy);
+    if(seen[k]) continue;
+    if(d[k]!==target) continue;
+    seen[k]=1;
+    d[k]=patColor(cx,cy,v);
+    stack.push([cx+1,cy],[cx-1,cy],[cx,cy+1],[cx,cy-1]);
+  }
+}
+/* Replace one palette index with another across active layer (or selection). */
+function replaceColor(from,to){
+  const d=activeLayer().data;
+  const minX=S.sel?S.sel.x:0, minY=S.sel?S.sel.y:0;
+  const maxX=S.sel?S.sel.x+S.sel.w-1:S.w-1, maxY=S.sel?S.sel.y+S.sel.h-1:S.h-1;
+  for(let y=minY;y<=maxY;y++)for(let x=minX;x<=maxX;x++)
+    if(d[idx(x,y)]===from) d[idx(x,y)]=to;
+}
+
+/* =====================================================================
+   DITHER GRADIENT — blends FG -> BG across the drag, using only those two
+   palette indices. `coverage` (0..1) along the drag direction is the target
+   "amount of BG". Algorithms:
+     - dnoise:    random threshold per pixel
+     - dordered:  ordered (Bayer 4x4) threshold matrix
+     - datkinson: Atkinson error-diffusion
+     - dfloyd:    Floyd–Steinberg error-diffusion
+   Bounded by the drag rectangle (or the active selection). Patterns are NOT
+   used here — they belong to the fill tools.
+   ===================================================================== */
+const BAYER4=[ 0,8,2,10, 12,4,14,6, 3,11,1,9, 15,7,13,5 ].map(v=>(v+0.5)/16);
+const isDither=(id)=>(id==="datkinson"||id==="dnoise"||id==="dordered"||id==="dfloyd");
+function ditherGradient(x0,y0,x1,y1,kind){
+  const d=activeLayer().data;
+  let ax=Math.min(x0,x1),ay=Math.min(y0,y1),bx=Math.max(x0,x1),by=Math.max(y0,y1);
+  if(S.sel){ ax=Math.max(ax,S.sel.x); ay=Math.max(ay,S.sel.y);
+    bx=Math.min(bx,S.sel.x+S.sel.w-1); by=Math.min(by,S.sel.y+S.sel.h-1); }
+  ax=clamp(ax,0,S.w-1); ay=clamp(ay,0,S.h-1); bx=clamp(bx,0,S.w-1); by=clamp(by,0,S.h-1);
+  const rad=S.ditherDir*Math.PI/180;
+  const dirx=Math.cos(rad), diry=-Math.sin(rad); // screen y is down
+  let pmin=Infinity,pmax=-Infinity;
+  for(const [cx,cy] of [[ax,ay],[bx,ay],[ax,by],[bx,by]]){
+    const proj=cx*dirx+cy*diry; if(proj<pmin)pmin=proj; if(proj>pmax)pmax=proj;
+  }
+  const span=Math.max(1e-6,pmax-pmin);
+  const rw=bx-ax+1, rh=by-ay+1;
+  const cov=(x,y)=>clamp((x*dirx+y*diry-pmin)/span,0,1); // 0->FG, 1->BG
+  if(kind==="dnoise"){
+    for(let y=ay;y<=by;y++)for(let x=ax;x<=bx;x++)
+      d[idx(x,y)] = (Math.random()<cov(x,y)) ? S.bg : S.fg;
+    return;
+  }
+  if(kind==="dordered"){
+    for(let y=ay;y<=by;y++)for(let x=ax;x<=bx;x++){
+      const thr=BAYER4[(y&3)*4+(x&3)];
+      d[idx(x,y)] = (cov(x,y) > thr) ? S.bg : S.fg;
+    }
+    return;
+  }
+  // --- error-diffusion kinds: build a target field then diffuse ---
+  const tgt=new Float32Array(rw*rh);
+  for(let y=0;y<rh;y++)for(let x=0;x<rw;x++) tgt[y*rw+x]=cov(ax+x,ay+y);
+  const at=(xx,yy)=> (xx>=0&&xx<rw&&yy>=0&&yy<rh) ? yy*rw+xx : -1;
+  for(let y=0;y<rh;y++){
+    for(let x=0;x<rw;x++){
+      const i=y*rw+x, old=tgt[i], useBG=old>=0.5;
+      d[idx(ax+x,ay+y)] = useBG ? S.bg : S.fg;
+      const err=old-(useBG?1:0);
+      if(kind==="dfloyd"){
+        // Floyd–Steinberg:   X 7
+        //                  3 5 1   (/16)
+        const a=at(x+1,y);   if(a>=0) tgt[a]+=err*7/16;
+        const b=at(x-1,y+1); if(b>=0) tgt[b]+=err*3/16;
+        const c=at(x,y+1);   if(c>=0) tgt[c]+=err*5/16;
+        const dd=at(x+1,y+1);if(dd>=0)tgt[dd]+=err*1/16;
+      } else { // datkinson (1/8 to 6 neighbours)
+        const e=err/8;
+        for(const [dx,dy] of [[1,0],[2,0],[-1,1],[0,1],[1,1],[0,2]]){
+          const j=at(x+dx,y+dy); if(j>=0) tgt[j]+=e;
+        }
+      }
+    }
+  }
+}
+
+/* refresh sprite list thumbnails if in sheet mode (used after stamp etc.) */
+function buildSpriteIfSheet(){ if(S.sheet) buildSpriteList(); }
+
+/* =====================================================================
+   TYPE TOOL — one click starts a text caret; typing updates a floating
+   bitmap (hard-thresholded, no anti-alias). You can drag to move it. A
+   SECOND click commits the text onto a NEW layer named with the first 12
+   characters of the text. Enter also commits; Esc cancels.
+   ===================================================================== */
+let _typing=null;  // {x,y,text,placed:bool}
+function handleTypeClick(x,y){
+  if(!_typing){
+    // first click: start a caret here
+    commitFloat();
+    _typing={x,y,text:"",placed:true};
+    renderTypeFloat();
+  } else {
+    // if click is inside the current text box, start moving it; else commit
+    const f=S.float;
+    if(f && x>=f.x && y>=f.y && x<f.x+f.w && y<f.y+f.h){
+      S.drag={mode:"typemove",ox:x-f.x,oy:y-f.y};
+    } else if(_typing.text.trim().length){
+      commitTypingToLayer();
+    } else {
+      // empty text: just relocate the caret
+      _typing.x=x; _typing.y=y; renderTypeFloat();
+    }
+  }
+}
+function renderTypeFloat(){
+  if(!_typing){ return; }
+  const txt=_typing.text||" ";
+  const size=S.fontSize;
+  const meas=document.createElement("canvas").getContext("2d");
+  meas.font=`${size}px "${S.font}"`;
+  const w=Math.max(1,Math.ceil(meas.measureText(txt).width)+2);
+  const h=Math.ceil(size*1.4);
+  const c=document.createElement("canvas"); c.width=w; c.height=h;
+  const cx=c.getContext("2d");
+  cx.imageSmoothingEnabled=false;
+  cx.textBaseline="top";
+  cx.font=`${size}px "${S.font}"`;
+  cx.fillStyle="#fff";
+  cx.fillText(txt,1,Math.floor(size*0.18));
+  const data=cx.getImageData(0,0,w,h).data;
+  const buf=new Uint8Array(w*h);
+  for(let i=0;i<w*h;i++){ buf[i] = data[i*4+3]>=128 ? S.fg : 0; }
+  S.float={x:_typing.x,y:_typing.y,w,h,data:buf};
+  render();
+}
+/* commit the floating text onto a brand-new layer named from the text */
+function commitTypingToLayer(){
+  if(!_typing||!S.float){ _typing=null; return; }
+  const f=S.float;
+  const name=(_typing.text.trim().slice(0,12))||"Text";
+  if(S.sheet){
+    // sheet mode: no layers — just bake into the single layer
+    commitFloat();
+  } else {
+    const data=newLayerData();
+    for(let yy=0;yy<f.h;yy++)for(let xx=0;xx<f.w;xx++){
+      const v=f.data[yy*f.w+xx]; if(v===0) continue;
+      const gx=f.x+xx, gy=f.y+yy;
+      if(inBounds(gx,gy)) data[idx(gx,gy)]=v;
+    }
+    S.layers.push({id:nextLayerId++,name,visible:true,data});
+    S.active=S.layers.length-1;
+    S.float=null;
+    buildLayerList();
+  }
+  _typing=null;
+  render(); updateStatus();
+  if(S.sheet) buildSpriteList();
+}
+function commitTyping(){ commitTypingToLayer(); }   // Enter key path
+function cancelTyping(){
+  if(!_typing) return;
+  _typing=null; S.float=null; render(); updateStatus();
+}
+
+/* =====================================================================
+   SPRAY TOOL — airbrush. While the pointer is down, sprays random pixels
+   within a radius around the cursor at a set density & speed. Honours the
+   pattern checkbox (sprays pattern colours) or FG.
+   ===================================================================== */
+let _sprayTimer=null, _sprayPos=null;
+function startSpray(p){
+  _sprayPos={x:p.x,y:p.y};
+  sprayBurst();
+  stopSprayTimer();
+  _sprayTimer=setInterval(()=>{ if(painting) sprayBurst(); else stopSprayTimer(); }, S.spraySpeed);
+}
+function stopSprayTimer(){ if(_sprayTimer){ clearInterval(_sprayTimer); _sprayTimer=null; } }
+function sprayBurst(){
+  if(!_sprayPos) return;
+  const R=Math.max(2,S.brushSize*3);
+  const n=S.sprayDensity;
+  for(let i=0;i<n;i++){
+    const a=Math.random()*Math.PI*2, r=Math.random()*R;
+    const x=Math.round(_sprayPos.x+Math.cos(a)*r), y=Math.round(_sprayPos.y+Math.sin(a)*r);
+    if(!inBounds(x,y)) continue;
+    if(S.sel && !S.float && (x<S.sel.x||y<S.sel.y||x>=S.sel.x+S.sel.w||y>=S.sel.y+S.sel.h)) continue;
+    activeLayer().data[idx(x,y)] = patColor(x,y,S.fg);
+  }
+  render();
+}
+
+/* =====================================================================
+   SHAPE TOOL — polyline of straight segments. Each click adds a vertex;
+   the moving segment previews to the cursor. Double-click / Enter / Esc
+   ends and bakes it.
+   ===================================================================== */
+function renderShapePreview(mx,my){
+  if(!S.shapePts) return;
+  activeLayer().data.set(S.shapeBase);
+  const pts=S.shapePts;
+  for(let i=0;i<pts.length-1;i++) plotLine(pts[i].x,pts[i].y,pts[i+1].x,pts[i+1].y,S.fg);
+  const last=pts[pts.length-1];
+  if(mx!=null) plotLine(last.x,last.y,mx,my,S.fg);
+}
+function endShape(closeIt){
+  if(!S.shapePts){ return; }
+  // bake without the rubber-band segment
+  activeLayer().data.set(S.shapeBase);
+  const pts=S.shapePts;
+  for(let i=0;i<pts.length-1;i++) plotLine(pts[i].x,pts[i].y,pts[i+1].x,pts[i+1].y,S.fg);
+  if(closeIt && pts.length>2) plotLine(pts[pts.length-1].x,pts[pts.length-1].y,pts[0].x,pts[0].y,S.fg);
+  S.shapePts=null; S.shapeBase=null;
+  render(); updateStatus();
+  if(S.sheet) buildSpriteList();
+}
+
+
+/* Magic wand: select bbox of the contiguous region of same colour at (x,y). */
+function magicWand(x,y){
+  const comp=composite(false);
+  const target=comp[idx(x,y)]===255?0:comp[idx(x,y)];
+  const seen=new Uint8Array(S.w*S.h);
+  const stack=[[x,y]];
+  let minX=x,minY=y,maxX=x,maxY=y,found=false;
+  while(stack.length){
+    const [cx,cy]=stack.pop();
+    if(cx<0||cy<0||cx>=S.w||cy>=S.h) continue;
+    const k=idx(cx,cy);
+    if(seen[k]) continue;
+    let cv=comp[k]===255?0:comp[k];
+    if(cv!==target) continue;
+    seen[k]=1; found=true;
+    if(cx<minX)minX=cx; if(cx>maxX)maxX=cx;
+    if(cy<minY)minY=cy; if(cy>maxY)maxY=cy;
+    stack.push([cx+1,cy],[cx-1,cy],[cx,cy+1],[cx,cy-1]);
+  }
+  if(found) S.sel={x:minX,y:minY,w:maxX-minX+1,h:maxY-minY+1};
+}
+/* Scale the current selection/float by an integer factor (nearest-neighbour). */
+function scaleSelection(factor){
+  if(!S.sel) return;
+  if(!S.float) liftSelectionToFloat(true);
+  const f=S.float;
+  const nw=Math.min(f.w*factor,S.w), nh=Math.min(f.h*factor,S.h);
+  const nd=new Uint8Array(nw*nh);
+  for(let y=0;y<nh;y++)for(let x=0;x<nw;x++){
+    const sx=Math.floor(x/factor), sy=Math.floor(y/factor);
+    if(sx<f.w&&sy<f.h) nd[y*nw+x]=f.data[sy*f.w+sx];
+  }
+  f.data=nd; f.w=nw; f.h=nh;
+  S.sel={x:f.x,y:f.y,w:nw,h:nh};
+}
+
+/* =====================================================================
+   SELECTION & TRANSFORMS
+   A "float" is a detached pixel buffer drawn above everything; committing
+   it bakes it into the active layer. Moving/rotating/flipping all act on
+   the float (lifting from the layer first if needed).
+   ===================================================================== */
+function liftSelectionToFloat(cut){
+  if(!S.sel || S.float) return;
+  const {x,y,w,h}=S.sel;
+  const data=new Uint8Array(w*h);
+  const d=activeLayer().data;
+  for(let yy=0;yy<h;yy++)for(let xx=0;xx<w;xx++){
+    data[yy*w+xx]=d[idx(x+xx,y+yy)];
+    if(cut) d[idx(x+xx,y+yy)]=0;
+  }
+  S.float={x,y,w,h,data};
+}
+function commitFloat(){
+  if(!S.float) return;
+  S.undo.push(snapshot());
+  if(S.undo.length>60) S.undo.shift();
+  S.redo.length=0;
+  refreshHistoryButtons();
+  const f=S.float, d=activeLayer().data;
+  for(let yy=0;yy<f.h;yy++)for(let xx=0;xx<f.w;xx++){
+    const v=f.data[yy*f.w+xx];
+    if(v===0) continue;
+    const gx=f.x+xx,gy=f.y+yy;
+    if(inBounds(gx,gy)) d[idx(gx,gy)]=v;
+  }
+  S.sel={x:f.x,y:f.y,w:f.w,h:f.h};
+  S.float=null;
+}
+function rotateFloat(cw){
+  if(!S.sel) return;
+  if(!S.float) liftSelectionToFloat(true);
+  const f=S.float;
+  const nw=f.h, nh=f.w;
+  const nd=new Uint8Array(nw*nh);
+  for(let y=0;y<f.h;y++)for(let x=0;x<f.w;x++){
+    const v=f.data[y*f.w+x];
+    let nx,ny;
+    if(cw){ nx=f.h-1-y; ny=x; } else { nx=y; ny=f.w-1-x; }
+    nd[ny*nw+nx]=v;
+  }
+  // keep centred-ish around original top-left
+  f.data=nd; f.w=nw; f.h=nh;
+  f.x=clamp(f.x,0,S.w-1); f.y=clamp(f.y,0,S.h-1);
+  S.sel={x:f.x,y:f.y,w:f.w,h:f.h};
+}
+function flipFloat(horiz){
+  if(!S.sel) return;
+  if(!S.float) liftSelectionToFloat(true);
+  const f=S.float, nd=new Uint8Array(f.w*f.h);
+  for(let y=0;y<f.h;y++)for(let x=0;x<f.w;x++){
+    const sx=horiz?f.w-1-x:x, sy=horiz?y:f.h-1-y;
+    nd[y*f.w+x]=f.data[sy*f.w+sx];
+  }
+  f.data=nd;
+}
+function copySelection(){
+  let src;
+  if(S.float){ src={w:S.float.w,h:S.float.h,data:S.float.data.slice()}; }
+  else if(S.sel){
+    const {x,y,w,h}=S.sel, data=new Uint8Array(w*h), d=activeLayer().data;
+    for(let yy=0;yy<h;yy++)for(let xx=0;xx<w;xx++) data[yy*w+xx]=d[idx(x+xx,y+yy)];
+    src={w,h,data};
+  } else return;
+  S.clipboard=src;
+}
+function cutSelection(){
+  if(!S.sel && !S.float) return;
+  pushUndo();
+  copySelection();
+  if(S.float){ S.float=null; }
+  else {
+    const {x,y,w,h}=S.sel,d=activeLayer().data;
+    for(let yy=0;yy<h;yy++)for(let xx=0;xx<w;xx++) d[idx(x+xx,y+yy)]=0;
+  }
+  S.sel=null;
+  render();updateStatus();
+}
+function pasteClipboard(){
+  if(!S.clipboard) return;
+  commitFloat();
+  const c=S.clipboard;
+  S.float={x:0,y:0,w:c.w,h:c.h,data:c.data.slice()};
+  S.sel={x:0,y:0,w:c.w,h:c.h};
+  S.tool="select"; setActiveTool("select");
+  render();updateStatus();
+}
+function cropToSelection(){
+  if(!S.sel) return;
+  commitFloat();
+  pushUndo();
+  const {x,y,w,h}=S.sel;
+  for(const L of S.layers){
+    const nd=new Uint8Array(w*h);
+    for(let yy=0;yy<h;yy++)for(let xx=0;xx<w;xx++) nd[yy*w+xx]=L.data[idx(x+xx,y+yy)];
+    L.data=nd;
+  }
+  S.w=w; S.h=h;
+  S.sel=null; S.float=null;
+  render();updateStatus();
+}
+/* =====================================================================
+   CANVAS POINTER INTERACTION
+   ===================================================================== */
+function evtToPixel(e){
+  const r=drawCanvas.getBoundingClientRect();
+  const x=Math.floor((e.clientX-r.left)/zoomX());
+  const y=Math.floor((e.clientY-r.top)/zoomY());
+  return {x:clamp(x,0,S.w-1),y:clamp(y,0,S.h-1),rawX:x,rawY:y};
+}
+function snapTile(x,y){
+  if(!S.snap) return {x,y};
+  return {x:Math.floor(x/S.tileW)*S.tileW, y:Math.floor(y/S.tileH)*S.tileH};
+}
+
+let painting=false;
+
+/* pattern fill applies to these tools when the checkbox is on */
+function patternToolActive(){
+  return S.usePattern && (S.tool==="brush"||S.tool==="fill"||S.tool==="frect"||S.tool==="fellipse"||S.tool==="spray");
+}
+/* which crop handle (corner/edge) is near point p? returns code or null.
+   tolerance scales with zoom so it's grabbable. */
+function cropHandleAt(px,py){
+  const s=S.sel; if(!s) return null;
+  const tol=Math.max(1,Math.round(3/Math.max(1,S.zoom)));
+  const nearL=Math.abs(px-s.x)<=tol, nearR=Math.abs(px-(s.x+s.w-1))<=tol;
+  const nearT=Math.abs(py-s.y)<=tol, nearB=Math.abs(py-(s.y+s.h-1))<=tol;
+  const inY=py>=s.y-tol&&py<=s.y+s.h-1+tol, inX=px>=s.x-tol&&px<=s.x+s.w-1+tol;
+  if(nearL&&nearT)return"tl"; if(nearR&&nearT)return"tr";
+  if(nearL&&nearB)return"bl"; if(nearR&&nearB)return"br";
+  if(nearL&&inY)return"l"; if(nearR&&inY)return"r";
+  if(nearT&&inX)return"t"; if(nearB&&inX)return"b";
+  return null;
+}
+
+drawCanvas.addEventListener("pointerdown",e=>{
+  e.preventDefault();
+  drawCanvas.setPointerCapture(e.pointerId);
+  const p=evtToPixel(e);
+  const v = (e.button===2) ? S.bg : S.fg;   // right-click paints BG/index 0
+  const t=S.tool;
+  _patternActive = patternToolActive();
+
+  if(t==="pencil"||t==="brush"){ pushUndo(); painting=true; setPixel(p.x,p.y,v); render(); }
+  else if(t==="erase"){ _patternActive=false; pushUndo(); painting=true; setPixel(p.x,p.y,S.bg); render(); }
+  else if(t==="fill"){ pushUndo(); bucketFill(p.x,p.y,v); render(); _patternActive=false; }
+  else if(t==="crop"){
+    // If a crop box exists and you click outside it -> apply the crop.
+    // Otherwise start/adjust the crop box (drag to draw, drag an edge to resize,
+    // drag inside to move).
+    const s=S.sel;
+    const inside = s && p.x>=s.x && p.y>=s.y && p.x<s.x+s.w && p.y<s.y+s.h;
+    if(s && !inside){
+      const handle=cropHandleAt(p.x,p.y);
+      if(handle){ S.drag={mode:"cropresize",h:handle,s:{...s}}; }
+      else { cropToSelection(); }   // click outside, not on a handle -> apply
+    } else if(inside){
+      const handle=cropHandleAt(p.x,p.y);
+      if(handle) S.drag={mode:"cropresize",h:handle,s:{...s}};
+      else S.drag={mode:"cropmove",ox:p.x-s.x,oy:p.y-s.y,s:{...s}};
+    } else {
+      // no selection yet -> start drawing one
+      S.drag={mode:"newsel",x0:p.x,y0:p.y};
+      S.sel={x:p.x,y:p.y,w:1,h:1};
+    }
+    render();
+  }
+  else if(t==="spray"){
+    pushUndo(); painting=true; startSpray(p);
+  }
+  else if(t==="shape"){
+    // polyline: click adds a vertex; double-click (or Enter/Esc) ends.
+    if(!S.shapePts){ pushUndo(); S.shapePts=[{x:p.x,y:p.y}]; S.shapeBase=activeLayer().data.slice(); }
+    else { S.shapePts.push({x:p.x,y:p.y}); }
+    renderShapePreview(p.x,p.y); render();
+  }
+  else if(t==="pan"){
+    const st=$("#stage");
+    S.drag={mode:"pan",sx:e.clientX,sy:e.clientY,sl:st.scrollLeft,stp:st.scrollTop};
+  }
+  else if(t==="stamp"){
+    if(S.float){ commitFloat(); render(); buildSpriteIfSheet(); }
+    else if(S.clipboard){ S.float={x:p.x,y:p.y,w:S.clipboard.w,h:S.clipboard.h,data:S.clipboard.data.slice()}; render(); }
+    else flash("Copy a selection first (Ctrl+C), then use the Stamp tool.");
+  }
+  else if(t==="type"){ handleTypeClick(p.x,p.y); }
+  else if(isDither(t)){
+    pushUndo();
+    S.drag={x0:p.x,y0:p.y,x1:p.x,y1:p.y,base:activeLayer().data.slice(),tool:t};
+  }
+  else if(t==="picker"){
+    const comp=composite(false); let cv=comp[idx(p.x,p.y)]; if(cv===255)cv=0;
+    if(e.button===2) S.bg=cv; else S.fg=cv;
+    buildPalette(); updateStatus();
+  }
+  else if(t==="replace"){
+    const comp=composite(false); let cv=comp[idx(p.x,p.y)]; if(cv===255)cv=0;
+    pushUndo(); replaceColor(cv, e.button===2?S.bg:S.fg); render(); updateStatus();
+  }
+  else if(t==="wand"){
+    commitFloat(); magicWand(p.x,p.y); render(); updateStatus();
+  }
+  else if(t==="line"||t==="rect"||t==="frect"||t==="ellipse"||t==="fellipse"){
+    pushUndo();
+    S.drag={x0:p.x,y0:p.y,x1:p.x,y1:p.y,v,base:activeLayer().data.slice(),tool:t};
+  }
+  else if(t==="move"){
+    // Move tool: drag the floating paste if present, else move whole layer
+    // content (or the active selection's content) as a float.
+    if(S.float){
+      S.drag={mode:"movefloat",ox:p.x-S.float.x,oy:p.y-S.float.y};
+    } else if(S.sel){
+      liftSelectionToFloat(true); pushUndo();
+      S.drag={mode:"movefloat",ox:p.x-S.float.x,oy:p.y-S.float.y};
+    } else {
+      // lift entire layer into a float
+      pushUndo();
+      const d=activeLayer().data, data=d.slice();
+      d.fill(0);
+      S.float={x:0,y:0,w:S.w,h:S.h,data};
+      S.drag={mode:"movefloat",ox:p.x,oy:p.y};
+    }
+    render();
+  }
+  else if(t==="select"){
+    // clicking inside an existing float/selection starts a move
+    const inFloat = S.float &&
+      p.x>=S.float.x && p.y>=S.float.y && p.x<S.float.x+S.float.w && p.y<S.float.y+S.float.h;
+    const inSel = S.sel && !S.float &&
+      p.x>=S.sel.x && p.y>=S.sel.y && p.x<S.sel.x+S.sel.w && p.y<S.sel.y+S.sel.h;
+    if(inFloat){
+      S.drag={mode:"movefloat",ox:p.x-S.float.x,oy:p.y-S.float.y};
+    } else if(inSel){
+      liftSelectionToFloat(true);
+      pushUndo();
+      S.drag={mode:"movefloat",ox:p.x-S.float.x,oy:p.y-S.float.y};
+    } else {
+      commitFloat();
+      const s=snapTile(p.x,p.y);
+      S.drag={mode:"newsel",x0:s.x,y0:s.y};
+      S.sel={x:s.x,y:s.y,w:1,h:1};
+    }
+    render();
+  }
+  updateStatus();
+});
+
+drawCanvas.addEventListener("pointermove",e=>{
+  const p=evtToPixel(e);
+  $("#stPos").textContent=p.x+","+p.y;
+  if(painting && (S.tool==="pencil"||S.tool==="brush"||S.tool==="erase")){
+    setPixel(p.x,p.y, S.tool==="erase"?S.bg:(e.buttons===2?S.bg:S.fg));
+    render();
+  }
+  else if(painting && S.tool==="spray"){
+    _sprayPos={x:p.x,y:p.y};
+  }
+  else if(S.drag && S.drag.mode==="typemove"){
+    _typing.x=p.x-S.drag.ox; _typing.y=p.y-S.drag.oy; renderTypeFloat();
+  }
+  else if(S.tool==="shape" && S.shapePts){
+    renderShapePreview(p.x,p.y); render();
+  }
+  else if(S.drag && S.drag.mode==="pan"){
+    const st=$("#stage");
+    st.scrollLeft=S.drag.sl-(e.clientX-S.drag.sx);
+    st.scrollTop =S.drag.stp-(e.clientY-S.drag.sy);
+  }
+  else if(S.tool==="stamp" && S.float){
+    S.float.x=p.x; S.float.y=p.y; render();
+  }
+  else if(S.drag && isDither(S.drag.tool)){
+    activeLayer().data.set(S.drag.base);
+    S.drag.x1=p.x; S.drag.y1=p.y;
+    ditherGradient(S.drag.x0,S.drag.y0,p.x,p.y,S.drag.tool);
+    render();
+  }
+  else if(S.drag && (S.drag.tool==="line"||S.drag.tool==="rect"||S.drag.tool==="frect"||S.drag.tool==="ellipse"||S.drag.tool==="fellipse")){
+    activeLayer().data.set(S.drag.base);
+    let ex=p.x, ey=p.y;
+    // Shift constrains: square boxes/ellipses, and 45°/axis-locked lines
+    if(S.shift){
+      const dx=ex-S.drag.x0, dy=ey-S.drag.y0;
+      if(S.drag.tool==="line"){
+        const adx=Math.abs(dx),ady=Math.abs(dy);
+        if(adx>2*ady) ey=S.drag.y0;            // horizontal
+        else if(ady>2*adx) ex=S.drag.x0;       // vertical
+        else { const m=Math.max(adx,ady); ex=S.drag.x0+Math.sign(dx)*m; ey=S.drag.y0+Math.sign(dy)*m; }
+      } else {
+        const m=Math.max(Math.abs(dx),Math.abs(dy));
+        ex=S.drag.x0+Math.sign(dx||1)*m; ey=S.drag.y0+Math.sign(dy||1)*m;
+      }
+    }
+    S.drag.x1=ex; S.drag.y1=ey;
+    const T=S.drag.tool;
+    if(T==="line") plotLine(S.drag.x0,S.drag.y0,ex,ey,S.drag.v);
+    else if(T==="rect"||T==="frect") rect(S.drag.x0,S.drag.y0,ex,ey,S.drag.v,T==="frect");
+    else plotEllipse(S.drag.x0,S.drag.y0,ex,ey,S.drag.v,T==="fellipse");
+    render();
+  }
+  else if(S.drag && S.drag.mode==="newsel"){
+    let ex=p.x,ey=p.y;
+    if(S.snap){ ex=Math.floor(ex/S.tileW)*S.tileW+S.tileW-1; ey=Math.floor(ey/S.tileH)*S.tileH+S.tileH-1; }
+    const x=Math.min(S.drag.x0,ex),y=Math.min(S.drag.y0,ey);
+    const w=Math.abs(ex-S.drag.x0)+1,h=Math.abs(ey-S.drag.y0)+1;
+    S.sel={x,y,w:clamp(w,1,S.w-x),h:clamp(h,1,S.h-y)};
+    drawOverlay();
+  }
+  else if(S.drag && S.drag.mode==="movefloat"){
+    S.float.x=clamp(p.x-S.drag.ox,-(S.float.w-1),S.w-1);
+    S.float.y=clamp(p.y-S.drag.oy,-(S.float.h-1),S.h-1);
+    render();
+  }
+  else if(S.drag && S.drag.mode==="cropmove"){
+    const s0=S.drag.s;
+    let nx=clamp(p.x-S.drag.ox,0,S.w-s0.w), ny=clamp(p.y-S.drag.oy,0,S.h-s0.h);
+    S.sel={x:nx,y:ny,w:s0.w,h:s0.h}; drawOverlay();
+  }
+  else if(S.drag && S.drag.mode==="cropresize"){
+    const s0=S.drag.s, hh=S.drag.h;
+    let L=s0.x, T=s0.y, R=s0.x+s0.w-1, B=s0.y+s0.h-1;
+    if(hh.includes("l")) L=clamp(p.x,0,R);
+    if(hh.includes("r")) R=clamp(p.x,L,S.w-1);
+    if(hh.includes("t")) T=clamp(p.y,0,B);
+    if(hh.includes("b")) B=clamp(p.y,T,S.h-1);
+    S.sel={x:L,y:T,w:R-L+1,h:B-T+1}; drawOverlay();
+  }
+});
+
+function endDrag(e){
+  if(painting){ painting=false; }
+  stopSprayTimer();
+  _patternActive=false;
+  if(S.drag){
+    if(S.drag.tool){ /* line/rect committed in-place already */ }
+    S.drag=null;
+  }
+  if(S.sheet) buildSpriteList();   // keep sprite thumbnails current
+  updateStatus();
+}
+drawCanvas.addEventListener("pointerup",endDrag);
+drawCanvas.addEventListener("pointercancel",endDrag);
+drawCanvas.addEventListener("contextmenu",e=>e.preventDefault());
+drawCanvas.addEventListener("dblclick",e=>{
+  if(S.tool==="shape" && S.shapePts){ e.preventDefault(); endShape(false); }
+});
+
+/* =====================================================================
+   LAYERS UI
+   ===================================================================== */
+function buildLayerList(){
+  const host=$("#layerList"); host.innerHTML="";
+  // show top layer first
+  for(let i=S.layers.length-1;i>=0;i--){
+    const L=S.layers[i];
+    const row=document.createElement("div");
+    row.className="layer-row"+(i===S.active?" sel":"");
+    row.draggable=true;
+    row.dataset.index=i;
+    row.innerHTML=`<span class="eye">${L.visible?"👁":"—"}</span>
+      <span class="lname">${escapeHtml(L.name)}</span>`;
+    row.querySelector(".eye").addEventListener("click",ev=>{
+      ev.stopPropagation(); L.visible=!L.visible; buildLayerList(); render();
+    });
+    row.addEventListener("click",()=>{ commitFloat(); S.active=i; buildLayerList(); updateStatus(); });
+    row.addEventListener("dblclick",()=>{
+      const n=prompt("Layer name:",L.name); if(n!==null){L.name=n;buildLayerList();}
+    });
+    // drag reorder
+    row.addEventListener("dragstart",ev=>{ ev.dataTransfer.setData("text/plain",i); row.classList.add("dragging"); });
+    row.addEventListener("dragend",()=>row.classList.remove("dragging"));
+    row.addEventListener("dragover",ev=>{ev.preventDefault();row.classList.add("dragover");});
+    row.addEventListener("dragleave",()=>row.classList.remove("dragover"));
+    row.addEventListener("drop",ev=>{
+      ev.preventDefault(); row.classList.remove("dragover");
+      const from=parseInt(ev.dataTransfer.getData("text/plain"),10);
+      const to=i; if(from===to) return;
+      reorderLayer(from,to);
+    });
+    host.appendChild(row);
+  }
+}
+function reorderLayer(from,to){
+  commitFloat();
+  const [m]=S.layers.splice(from,1);
+  S.layers.splice(to,0,m);
+  S.active=to;
+  buildLayerList(); render(); updateStatus();
+}
+function addLayer(){
+  if(S.sheet){ flash("Layers are disabled in Spritesheet mode."); return; }
+  commitFloat(); pushUndo();
+  S.layers.push(makeLayer("Layer "+(S.layers.length+1)));
+  S.active=S.layers.length-1;
+  buildLayerList(); render(); updateStatus();
+}
+function duplicateLayer(){
+  if(S.sheet){ flash("Layers are disabled in Spritesheet mode."); return; }
+  commitFloat(); pushUndo();
+  const src=activeLayer();
+  const dup={id:nextLayerId++,name:src.name+" copy",visible:true,data:src.data.slice()};
+  S.layers.splice(S.active+1,0,dup);
+  S.active++;
+  buildLayerList(); render(); updateStatus();
+}
+function deleteLayer(){
+  if(S.sheet){ flash("Layers are disabled in Spritesheet mode."); return; }
+  if(S.layers.length<=1){ flash("Cannot delete the last layer."); return; }
+  commitFloat(); pushUndo();
+  S.layers.splice(S.active,1);
+  S.active=clamp(S.active,0,S.layers.length-1);
+  buildLayerList(); render(); updateStatus();
+}
+function mergeDown(){
+  if(S.sheet){ flash("Layers are disabled in Spritesheet mode."); return; }
+  if(S.active===0){ flash("No layer below to merge into."); return; }
+  commitFloat(); pushUndo();
+  const top=S.layers[S.active], bot=S.layers[S.active-1];
+  for(let i=0;i<top.data.length;i++) if(top.data[i]!==0) bot.data[i]=top.data[i];
+  S.layers.splice(S.active,1);
+  S.active--;
+  buildLayerList(); render(); updateStatus();
+}
+function clearLayer(){ commitFloat(); pushUndo(); activeLayer().data.fill(0); render(); }
+function fillLayer(){ commitFloat(); pushUndo(); activeLayer().data.fill(S.fg); render(); }
+function nudge(dx,dy){
+  commitFloat(); pushUndo();
+  const d=activeLayer().data, nd=new Uint8Array(d.length);
+  for(let y=0;y<S.h;y++)for(let x=0;x<S.w;x++){
+    const nx=x+dx,ny=y+dy;
+    if(inBounds(nx,ny)) nd[idx(nx,ny)]=d[idx(x,y)];
+  }
+  activeLayer().data=nd; render();
+}
+
+/* =====================================================================
+   FRAMES / ANIMATION
+   ===================================================================== */
+function buildFrameStrip(){
+  const host=$("#frameStrip"); if(!host) return;
+  host.innerHTML="";
+  const pal=PALETTES[S.set].map(hex2rgb);
+  S.frames.forEach((f,i)=>{
+    const cell=document.createElement("div");
+    cell.className="frame-cell"+(i===S.curFrame?" sel":"");
+    cell.title="Frame "+(i+1);
+    const cv=document.createElement("canvas");
+    cv.width=S.w; cv.height=S.h; cv.className="frame-thumb";
+    const cx=cv.getContext("2d"); const c=compositeFrame(f);
+    const im=cx.createImageData(S.w,S.h);
+    for(let k=0;k<c.length;k++){let v=c[k];if(v===255)v=0;const col=pal[v];im.data[k*4]=col[0];im.data[k*4+1]=col[1];im.data[k*4+2]=col[2];im.data[k*4+3]=255;}
+    cx.putImageData(im,0,0);
+    const num=document.createElement("span"); num.className="frame-num"; num.textContent=i+1;
+    cell.appendChild(cv); cell.appendChild(num);
+    cell.addEventListener("click",()=>gotoFrame(i));
+    host.appendChild(cell);
+  });
+  $("#frameInfo").textContent=`${S.curFrame+1}/${S.frames.length}`;
+}
+function addFrame(dup){
+  if(S.sheet){ flash("Animation frames are disabled in Spritesheet mode."); return; }
+  commitFloat(); stowFrame(); pushUndo();
+  const layers = dup
+    ? S.layers.map(L=>({id:nextLayerId++,name:L.name,visible:L.visible,data:L.data.slice()}))
+    : [makeLayer("Layer 1")];
+  const f=makeFrame(layers);
+  S.frames.splice(S.curFrame+1,0,f);
+  S.curFrame++; syncFrame();
+  buildLayerList(); buildFrameStrip(); render(); updateStatus();
+}
+function deleteFrame(){
+  if(S.sheet){ return; }
+  if(S.frames.length<=1){ flash("Cannot delete the only frame."); return; }
+  commitFloat(); pushUndo();
+  S.frames.splice(S.curFrame,1);
+  S.curFrame=clamp(S.curFrame,0,S.frames.length-1); syncFrame();
+  buildLayerList(); buildFrameStrip(); render(); updateStatus();
+}
+function playStop(){
+  if(S.sheet){ flash("Animation is disabled in Spritesheet mode."); return; }
+  if(S.playing){ stopPlay(); return; }
+  if(S.frames.length<2){ flash("Add more frames to animate."); return; }
+  S.playing=true; $("#btnPlay").textContent="⏹ Stop";
+  commitFloat(); stowFrame();
+  let i=S.curFrame;
+  const tick=()=>{
+    if(!S.playing) return;
+    i=(i+1)%S.frames.length;
+    S.curFrame=i; syncFrame(); render(); buildFrameStrip();
+    S.playTimer=setTimeout(tick, Math.max(30,Math.round(1000/S.fps)));
+  };
+  S.playTimer=setTimeout(tick, Math.max(30,Math.round(1000/S.fps)));
+}
+function stopPlay(){
+  S.playing=false; if(S.playTimer) clearTimeout(S.playTimer);
+  $("#btnPlay").textContent="▶ Play";
+  buildLayerList(); buildFrameStrip(); render(); updateStatus();
+}
+
+/* =====================================================================
+   PALETTE-USAGE HISTOGRAM
+   ===================================================================== */
+function showHistogram(){
+  const comp=flattenIndices();
+  const counts=[0,0,0,0];
+  for(let i=0;i<comp.length;i++) counts[comp[i]]++;
+  const total=comp.length;
+  const pal=PALETTES[S.set];
+  let html="<table style='width:100%;border-collapse:collapse;font-size:12px'>";
+  for(let i=0;i<4;i++){
+    const pct=(counts[i]/total*100).toFixed(1);
+    html+=`<tr>
+      <td style='padding:3px'><span style='display:inline-block;width:16px;height:16px;background:${pal[i]};border:1px solid #000;vertical-align:middle'></span></td>
+      <td style='padding:3px'>${i} ${PAL_NAMES[S.set][i]}</td>
+      <td style='padding:3px;text-align:right'>${counts[i]}</td>
+      <td style='padding:3px;width:120px'><div style='background:#3a3a3a;height:12px'><div style='background:${pal[i]};height:12px;width:${pct}%'></div></div></td>
+      <td style='padding:3px;text-align:right'>${pct}%</td>
+    </tr>`;
+  }
+  html+="</table>";
+  html+=`<p class='swap-hint'>${total} pixels total · ${Math.ceil(S.w/4)*S.h} bytes packed</p>`;
+  openInfo("Palette Usage",html);
+}
+
+/* =====================================================================
+   STATUS BAR + small UI utils
+   ===================================================================== */
+function escapeHtml(s){return s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+function updateStatus(){
+  $("#stMode").textContent=MODES[S.mode].name+" ("+MODES[S.mode].vdg+")";
+  $("#stSize").textContent=S.w+"×"+S.h;
+  $("#stBytes").textContent=Math.ceil(S.w/4)*S.h;
+  $("#stColor").textContent=S.fg+" "+PAL_NAMES[S.set][S.fg];
+  $("#stLayer").textContent=(S.active+1)+"/"+S.layers.length;
+  $("#stFrame").textContent=(S.curFrame+1)+"/"+S.frames.length;
+  $("#stSel").textContent=S.float?`float ${S.float.w}×${S.float.h}`:(S.sel?`${S.sel.w}×${S.sel.h} @${S.sel.x},${S.sel.y}`:"none");
+  $("#zoomLabel").textContent=(S.zoom>=1?Math.round(S.zoom):S.zoom.toFixed(2))+"×";
+}
+function flash(msg){ openInfo("Notice",`<p>${escapeHtml(msg)}</p>`); }
+/* =====================================================================
+   FILE I/O
+   ===================================================================== */
+function flattenIndices(){
+  // returns Uint8Array of palette indices 0..3 (transparent -> 0)
+  const comp=composite(false);
+  const out=new Uint8Array(S.w*S.h);
+  for(let i=0;i<comp.length;i++){ let v=comp[i]; out[i]=(v===255)?0:v; }
+  return out;
+}
+
+/* ---- JSON project (v2 = frames; still reads v1 single-frame) ---- */
+function saveJSON(){
+  commitFloat(); stowFrame();
+  const proj={
+    format:"coco-paint-v2",
+    mode:S.mode, set:S.set, w:S.w, h:S.h, fps:S.fps,
+    tileW:S.tileW, tileH:S.tileH, gridColor:S.gridColor,
+    sheet:S.sheet ? {tileW:S.sheet.tileW,tileH:S.sheet.tileH,cols:S.sheet.cols,
+      rows:S.sheet.rows,sel:S.sheet.sel,sprites:S.sheet.sprites.map(s=>({name:s.name}))} : null,
+    frames:S.frames.map(f=>({
+      dur:f.dur, active:f.active,
+      layers:f.layers.map(L=>({name:L.name,visible:L.visible,data:Array.from(L.data)})),
+    })),
+  };
+  downloadBlob(new Blob([JSON.stringify(proj)],{type:"application/json"}),
+    S.sheet?"spritesheet.coco.json":"sprite.coco.json");
+}
+function loadJSON(obj){
+  if(!obj||(obj.format!=="coco-paint-v1"&&obj.format!=="coco-paint-v2")){ flash("Not a Color Spritx project file."); return; }
+  stopPlay(); stopSpriteFlash();
+  S.mode=obj.mode; S.set=obj.set; S.w=obj.w; S.h=obj.h;
+  S.fps=obj.fps||S.fps;
+  S.tileW=obj.tileW||16; S.tileH=obj.tileH||16; S.gridColor=obj.gridColor||"#ff00ff";
+  S.sheet = obj.sheet ? {tileW:obj.sheet.tileW,tileH:obj.sheet.tileH,cols:obj.sheet.cols,
+    rows:obj.sheet.rows,sel:obj.sheet.sel||0,sprites:obj.sheet.sprites.map(s=>({name:s.name}))} : null;
+  if(obj.format==="coco-paint-v2"){
+    S.frames=obj.frames.map(f=>({
+      id:nextFrameId++, dur:f.dur||Math.round(1000/S.fps), active:f.active||0,
+      layers:f.layers.map(L=>({id:nextLayerId++,name:L.name,visible:L.visible!==false,data:Uint8Array.from(L.data)})),
+    }));
+  } else {
+    // v1: a single frame from the flat layer list
+    S.frames=[{id:nextFrameId++,dur:Math.round(1000/S.fps),active:obj.layers.length-1,
+      layers:obj.layers.map(L=>({id:nextLayerId++,name:L.name,visible:L.visible!==false,data:Uint8Array.from(L.data)}))}];
+  }
+  S.curFrame=0; syncFrame();
+  S.sel=null; S.float=null; S.undo=[]; S.redo=[];
+  applyModeUI();
+  syncControlsFromState();
+  buildLayerList(); buildFrameStrip(); buildSpriteList(); buildPalette(); render(); updateStatus(); refreshHistoryButtons();
+  if(S.sheet) startSpriteFlash();
+}
+
+/* ---- PNG export (scaled; respects square vs Fit-to-TV view) ---- */
+function exportPNG(){
+  const ax=S.wideView?MODES[S.mode].tvX:1, ay=S.wideView?MODES[S.mode].tvY:1;
+  const scale=4; // export at 4x for crispness
+  const cw=S.w*ax*scale, ch=S.h*ay*scale;
+  const c=document.createElement("canvas"); c.width=cw; c.height=ch;
+  const x=c.getContext("2d"); x.imageSmoothingEnabled=false;
+  const comp=flattenIndices(), pal=PALETTES[S.set].map(hex2rgb);
+  // draw to a 1:1 tmp then scale
+  const tmp=document.createElement("canvas"); tmp.width=S.w; tmp.height=S.h;
+  const tctx=tmp.getContext("2d"); const img=tctx.createImageData(S.w,S.h);
+  for(let i=0;i<comp.length;i++){const cc=pal[comp[i]];const o=i*4;img.data[o]=cc[0];img.data[o+1]=cc[1];img.data[o+2]=cc[2];img.data[o+3]=255;}
+  tctx.putImageData(img,0,0);
+  x.drawImage(tmp,0,0,cw,ch);
+  c.toBlob(b=>downloadBlob(b,"sprite.png"),"image/png");
+}
+
+/* ---- PNG import (nearest-colour quantise to active set) ---- */
+function importPNG(file){
+  const url=URL.createObjectURL(file);
+  const im=new Image();
+  im.onload=()=>{
+    URL.revokeObjectURL(url);
+    // import at NATIVE size — do not scale. Resize the document to match.
+    const iw=im.naturalWidth, ih=im.naturalHeight;
+    const MAXW=1024, MAXH=1024; // sanity cap to avoid runaway memory
+    const w=Math.min(iw,MAXW), h=Math.min(ih,MAXH);
+    const c=document.createElement("canvas"); c.width=w; c.height=h;
+    const x=c.getContext("2d"); x.imageSmoothingEnabled=false;
+    x.drawImage(im,0,0); // 1:1, no scaling
+    const data=x.getImageData(0,0,w,h).data;
+    const pal=PALETTES[S.set].map(hex2rgb);
+    // resize the document to the image's true size, single layer
+    S.w=w; S.h=h;
+    const L=newLayerData();
+    for(let i=0;i<w*h;i++){
+      const r=data[i*4],g=data[i*4+1],b=data[i*4+2],a=data[i*4+3];
+      if(a<128){ L[i]=0; continue; }
+      let best=0,bd=1e9;
+      for(let p=0;p<4;p++){
+        const dr=r-pal[p][0],dg=g-pal[p][1],db=b-pal[p][2];
+        const dist=dr*dr+dg*dg+db*db;
+        if(dist<bd){bd=dist;best=p;}
+      }
+      L[i]=best;
+    }
+    S.frames=[{id:nextFrameId++,dur:Math.round(1000/S.fps),active:0,
+      layers:[{id:nextLayerId++,name:"Imported",visible:true,data:L}]}];
+    S.curFrame=0; syncFrame();
+    S.sel=null; S.float=null; S.undo=[]; S.redo=[];
+    buildLayerList(); buildFrameStrip(); updateStatus(); refreshHistoryButtons();
+    zoomFit();
+    // warn if it can't fit a real PMODE buffer
+    const fits = (iw===MODES[1].w&&ih===MODES[1].h) || (iw===MODES[3].w&&ih===MODES[3].h);
+    if(!fits){
+      flash(`Imported at native ${iw}×${ih}. This is NOT a valid CoCo PMODE size `+
+        `(PMODE 1 = 128×96, PMODE 3 = 128×192). Crop or resize to one of those `+
+        `before exporting to CoCo binary, or the image will be the wrong size on hardware.`);
+    }
+  };
+  im.src=url;
+}
+
+/* Does the current image match a real PMODE buffer size? */
+function isValidCoCoSize(){
+  return (S.w===MODES[1].w&&S.h===MODES[1].h) || (S.w===MODES[3].w&&S.h===MODES[3].h);
+}
+
+/* ---- CoCo binary export ----
+   Packs to native G3C/G6C layout: 4 pixels per byte, 2 bits each,
+   MSB-first (left pixel in high bits). Row stride = ceil(w/4) bytes. */
+function packBuffer(comp,w,h){
+  const bytesPerRow=Math.ceil(w/4);
+  const buf=new Uint8Array(bytesPerRow*h);
+  for(let y=0;y<h;y++){
+    for(let bx=0;bx<bytesPerRow;bx++){
+      let byte=0;
+      for(let p=0;p<4;p++){
+        const x=bx*4+p;
+        const v=(x<w)?(comp[y*w+x]&3):0;
+        byte|=v<<((3-p)*2);   // p=0 -> bits 7-6 (leftmost)
+      }
+      buf[y*bytesPerRow+bx]=byte;
+    }
+  }
+  return buf;
+}
+function packCoCo(){ return packBuffer(flattenIndices(),S.w,S.h); }
+
+/* Wrap raw data in a LOADM-compatible .BIN:
+   preamble  $00 LL HH SS EE   (LL:HH = length big-endian, SS:EE = load addr)
+   data...
+   postamble $FF $00 $00 EE EE (EE:EE = exec addr) */
+function wrapLOADM(data,loadAddr,execAddr){
+  const len=data.length;
+  const out=new Uint8Array(5+len+5);
+  out[0]=0x00; out[1]=(len>>8)&0xff; out[2]=len&0xff;
+  out[3]=(loadAddr>>8)&0xff; out[4]=loadAddr&0xff;
+  out.set(data,5);
+  const o=5+len;
+  out[o]=0xFF; out[o+1]=0x00; out[o+2]=0x00;
+  out[o+3]=(execAddr>>8)&0xff; out[o+4]=execAddr&0xff;
+  return out;
+}
+function exportBIN(withHeader){
+  if(!S.sheet && !isValidCoCoSize()){
+    flash(`Cannot export to CoCo binary: the image is ${S.w}×${S.h}, which is not a `+
+      `valid PMODE size. Crop or resize to PMODE 1 (128×96) or PMODE 3 (128×192) first, `+
+      `otherwise it will be the wrong length and can crash the CoCo when loaded.`);
+    return;
+  }
+  let buf=packCoCo();
+  const base="sprite_"+MODES[S.mode].vdg.toLowerCase();
+  if(withHeader){
+    const load=0x0E00;       // common safe data load address
+    buf=wrapLOADM(buf,load,load);
+    downloadBlob(new Blob([buf],{type:"application/octet-stream"}),base+"_loadm.bin");
+  } else {
+    downloadBlob(new Blob([buf],{type:"application/octet-stream"}),base+".bin");
+  }
+}
+
+/* ---- Animation strip: all frames laid out horizontally as one sheet,
+   plus a packed binary of every frame end-to-end + an offset table. */
+function exportAnimStrip(){
+  commitFloat(); stowFrame();
+  const n=S.frames.length, pal=PALETTES[S.set].map(hex2rgb);
+  // PNG strip
+  const ax=S.wideView?MODES[S.mode].tvX:1, ay=S.wideView?MODES[S.mode].tvY:1, scale=3;
+  const cw=S.w*n, ch=S.h;
+  const tmp=document.createElement("canvas"); tmp.width=cw; tmp.height=ch;
+  const tctx=tmp.getContext("2d"); const img=tctx.createImageData(cw,ch);
+  for(let fi=0;fi<n;fi++){
+    const c=compositeFrame(S.frames[fi]);
+    for(let y=0;y<S.h;y++)for(let x=0;x<S.w;x++){
+      let v=c[idx(x,y)]; if(v===255)v=0; const col=pal[v];
+      const o=(y*cw+(fi*S.w+x))*4;
+      img.data[o]=col[0];img.data[o+1]=col[1];img.data[o+2]=col[2];img.data[o+3]=255;
+    }
+  }
+  tctx.putImageData(img,0,0);
+  const out=document.createElement("canvas"); out.width=cw*ax*scale; out.height=ch*ay*scale;
+  const octx2=out.getContext("2d"); octx2.imageSmoothingEnabled=false;
+  octx2.drawImage(tmp,0,0,out.width,out.height);
+  out.toBlob(b=>downloadBlob(b,"anim_strip.png"),"image/png");
+
+  // packed binary: each frame's packed bytes concatenated
+  const bpr=Math.ceil(S.w/4), frameBytes=bpr*S.h;
+  const all=new Uint8Array(frameBytes*n);
+  for(let fi=0;fi<n;fi++) all.set(packBuffer(compositeFrame(S.frames[fi]),S.w,S.h),fi*frameBytes);
+  downloadBlob(new Blob([all],{type:"application/octet-stream"}),"anim_frames.bin");
+}
+
+/* ---- 6809 FCB assembly source ---- */
+function exportFCB(){
+  if(!S.sheet && !isValidCoCoSize()){
+    flash(`Cannot export FCB source: image is ${S.w}×${S.h}, not a valid PMODE size. `+
+      `Crop/resize to 128×96 or 128×192 first.`);
+    return;
+  }
+  commitFloat();
+  const buf=packCoCo();
+  const bpr=Math.ceil(S.w/4);
+  const m=MODES[S.mode];
+  let s=`* Color Spritx export — ${m.name} (${m.vdg}) ${S.w}x${S.h}\n`;
+  s+=`* (c) 2026 Carlos A. Camacho\n`;
+  s+=`* Packed 2bpp, ${bpr} bytes/row, ${S.h} rows, ${buf.length} bytes total.\n`;
+  s+=`* Palette set ${S.set}: ${PAL_NAMES[S.set].join(", ")}\n`;
+  s+=`* Pixel value 0=${PAL_NAMES[S.set][0]} 1=${PAL_NAMES[S.set][1]} 2=${PAL_NAMES[S.set][2]} 3=${PAL_NAMES[S.set][3]}\n`;
+  if(S.sheet && $("#shExportNames") && $("#shExportNames").checked){
+    s+=`*\n* SPRITESHEET: ${S.sheet.cols} cols x ${S.sheet.rows} rows, `+
+       `each ${S.sheet.tileW}x${S.sheet.tileH} px.\n`;
+    s+=`* Sprite map (name : col,row : top-left byte offset within sheet):\n`;
+    const bprS=Math.ceil(S.w/4);
+    S.sheet.sprites.forEach((sp,i)=>{
+      const col=i%S.sheet.cols, row=Math.floor(i/S.sheet.cols);
+      const offset=(row*S.sheet.tileH)*bprS + Math.floor((col*S.sheet.tileW)/4);
+      s+=`*   ${sp.name} : ${col},${row} : $${offset.toString(16).toUpperCase()}\n`;
+    });
+  }
+  s+="\n";
+  s+=`SPRWID  EQU     ${bpr}          ; bytes per row\nSPRHGT  EQU     ${S.h}\n\n`;
+  s+="SPRITE\n";
+  for(let y=0;y<S.h;y++){
+    const row=[];
+    for(let bx=0;bx<bpr;bx++) row.push("$"+buf[y*bpr+bx].toString(16).toUpperCase().padStart(2,"0"));
+    // break into FCB lines of up to 8 bytes
+    for(let i=0;i<row.length;i+=8){
+      s+="        FCB     "+row.slice(i,i+8).join(",")+(i===0?`   ; row ${y}`:"")+"\n";
+    }
+  }
+  s+="SPRITEEND\n";
+  downloadBlob(new Blob([s],{type:"text/plain"}),"sprite.asm");
+}
+
+/* ---- BASIC DATA + READ/POKE loader ---- */
+/* RLE-compress a byte buffer into (count,value) pairs, count 1..255. */
+function rleCompress(buf){
+  const out=[];
+  let i=0;
+  while(i<buf.length){
+    const v=buf[i]; let run=1;
+    while(i+run<buf.length && buf[i+run]===v && run<255) run++;
+    out.push(run, v); i+=run;
+  }
+  return out;
+}
+
+/* Build a hand-assembled 6809 RLE-expand routine with the source, dest and
+   pair-count baked into immediate operands (no direct-page dependency).
+   srcAddr = where the RLE pairs live, dstAddr = screen buffer, pairs = count.
+     LDX #src    8E hi lo
+     LDU #dst    CE hi lo
+     LDD #pairs  CC hi lo
+   LOOP:
+     PSHS D      34 06
+     LDA ,X+     A6 80        ; run count
+     LDB ,X+     E6 80        ; value
+   FILL:
+     STB ,U+     E7 C0
+     DECA        4A
+     BNE FILL    26 FB
+     PULS D      35 06
+     SUBD #1     83 00 01
+     BNE LOOP    26 EE
+     RTS         39
+   Total length = 9 (setup) + 16 = 25 bytes. */
+function buildRleML(srcAddr,dstAddr,pairs){
+  const hi=v=>(v>>8)&0xFF, lo=v=>v&0xFF;
+  return [
+    0x8E, hi(srcAddr), lo(srcAddr),   // LDX #src
+    0xCE, hi(dstAddr), lo(dstAddr),   // LDU #dst
+    0xCC, hi(pairs),   lo(pairs),     // LDD #pairs
+    0x34,0x06,                        // PSHS D     (LOOP)
+    0xA6,0x80,                        // LDA ,X+
+    0xE6,0x80,                        // LDB ,X+
+    0xE7,0xC0,                        // STB ,U+    (FILL)
+    0x4A,                             // DECA
+    0x26,0xFB,                        // BNE FILL
+    0x35,0x06,                        // PULS D
+    0x83,0x00,0x01,                   // SUBD #1
+    0x26,0xEE,                        // BNE LOOP
+    0x39                              // RTS
+  ];
+}
+
+function exportBASIC(fastArg){
+  if(!S.sheet && !isValidCoCoSize()){
+    flash(`Cannot export BASIC loader: image is ${S.w}×${S.h}, not a valid PMODE size. `+
+      `Crop/resize to 128×96 or 128×192 first.`);
+    return;
+  }
+  commitFloat();
+  const buf=packCoCo();
+  const m=MODES[S.mode];
+  const fast = fastArg!==false; // default fast
+  const lines=[]; let ln=10;
+  const L=s=>{ lines.push(`${ln} ${s}`); ln+=10; };
+  L(`' COLOR SPRITX ${m.name} ${S.w}X${S.h} ${buf.length} BYTES`);
+  L(`' (C) 2026 CARLOS A. CAMACHO`);
+  if(S.sheet && $("#shExportNames") && $("#shExportNames").checked){
+    L(`' SPRITESHEET ${S.sheet.cols}X${S.sheet.rows} TILES OF ${S.sheet.tileW}X${S.sheet.tileH}`);
+    S.sheet.sprites.forEach((sp,i)=>{
+      const col=i%S.sheet.cols, row=Math.floor(i/S.sheet.cols);
+      L(`' SPRITE ${i+1}: ${sp.name.toUpperCase()} AT COL ${col} ROW ${row}`);
+    });
+  }
+
+  if(!fast){
+    // ---- classic slow loader (READ/POKE every byte) ----
+    L(`PMODE ${S.mode},1:PCLS:SCREEN 1,${S.set}`);
+    L(`START=&H0E00`);
+    L(`FOR I=0 TO ${buf.length-1}:READ B:POKE START+I,B:NEXT`);
+    L(`GOTO ${ln}`);
+    for(let i=0;i<buf.length;i+=16){
+      const vals=[]; for(let j=i;j<Math.min(i+16,buf.length);j++) vals.push(buf[j]);
+      L(`DATA ${vals.join(",")}`);
+    }
+    downloadBlob(new Blob([lines.join("\n")+"\n"],{type:"text/plain"}),"sprite.bas");
+    return;
+  }
+
+  // ---- FAST loader: RLE data expanded by a tiny ML routine in PROTECTED RAM ----
+  // The ML routine + RLE data are POKEd into high RAM that we fence off with
+  // CLEAR so neither the BASIC program text nor its variables/DATA can collide
+  // with them. We place them high enough ($6000) to sit above the program even
+  // for large images on a 32K/64K CoCo.
+  const rle=rleCompress(buf);          // [count,value, ...]
+  const pairs=rle.length/2;
+  const SCREEN=0x0E00;                 // PMODE graphics page 1 (default PCLEAR 4)
+  const MLADDR=0x6000;                 // ML routine, high & protected by CLEAR
+  const ml=buildRleML(0,SCREEN,pairs);
+  const DATAADDR=MLADDR+ml.length;     // RLE pairs immediately follow the routine
+  ml[1]=(DATAADDR>>8)&0xFF; ml[2]=DATAADDR&0xFF;   // patch LDX #src
+  const CLEARTO=MLADDR-1;              // protect everything from MLADDR up
+
+  L(`' FAST LOADER — RLE (${pairs} pairs vs ${buf.length} raw bytes) expanded by a`);
+  L(`' 25-byte 6809 ML routine. Needs a 32K+ CoCo. CLEAR fences off $${MLADDR.toString(16).toUpperCase()}+.`);
+  L(`CLEAR 200,&H${CLEARTO.toString(16).toUpperCase()}`);
+  L(`PMODE ${S.mode},1:PCLS:SCREEN 1,${S.set}`);
+  L(`ML=&H${MLADDR.toString(16).toUpperCase()}:DA=&H${DATAADDR.toString(16).toUpperCase()}`);
+  L(`FOR I=0 TO ${ml.length-1}:READ B:POKE ML+I,B:NEXT`);
+  L(`FOR I=0 TO ${rle.length-1}:READ B:POKE DA+I,B:NEXT`);
+  L(`EXEC ML`);
+  L(`GOTO ${ln}`);
+  // ML routine bytes
+  for(let i=0;i<ml.length;i+=16){
+    const vals=[]; for(let j=i;j<Math.min(i+16,ml.length);j++) vals.push(ml[j]);
+    L(`DATA ${vals.join(",")}`);
+  }
+  // RLE data
+  for(let i=0;i<rle.length;i+=16){
+    const vals=[]; for(let j=i;j<Math.min(i+16,rle.length);j++) vals.push(rle[j]);
+    L(`DATA ${vals.join(",")}`);
+  }
+  downloadBlob(new Blob([lines.join("\n")+"\n"],{type:"text/plain"}),"sprite_fast.bas");
+}
+
+function downloadBlob(blob,name){
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob); a.download=name;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},100);
+}
+
+/* =====================================================================
+   TOOLS, PALETTE, MENUS, MODALS
+   ===================================================================== */
+/* 16 dither patterns as 8x8 tiles. 1 = FG, 0 = BG. The dither tools blend
+   FG->BG across a drag using a threshold map; the chosen pattern decides
+   the texture used at intermediate coverage. Each pattern also defines a
+   coverage value used for solid-pattern fills. */
+const PATTERNS = (()=>{
+  const P=[];
+  const make=(name,fn)=>{ const t=new Uint8Array(64); for(let y=0;y<8;y++)for(let x=0;x<8;x++)t[y*8+x]=fn(x,y)?1:0; P.push({name,tile:t}); };
+  make("Checkerboard",        (x,y)=>(x+y)&1);
+  make("Sparse Checker",      (x,y)=>((x&1)===0&&(y&1)===0));
+  make("Very Sparse",         (x,y)=>((x&3)===0&&(y&3)===0));
+  make("Large Checkers",      (x,y)=>(((x>>1)+(y>>1))&1));
+  make("Horizontal Stripes",  (x,y)=>(y&1));
+  make("Vertical Stripes",    (x,y)=>(x&1));
+  make("Diagonal Lines",      (x,y)=>((x+y)&3)===0);
+  make("Cross-Hatch",         (x,y)=>((x&3)===0||(y&3)===0));
+  make("Zig-Zag",             (x,y)=>{ const p=y&3; const z=(p<2)?p:3-p; return ((x+z)&3)===0; });
+  // original patterns:
+  make("Brick",               (x,y)=>((y&3)===0)||((y&3)===2&&((x+ (y&4?4:0))&7)===0)? (y&1)?0:1 : ( (y%4===0)|| ((x+ (Math.floor(y/4)%2?4:0))%8===0) )?1:0 );
+  make("Diamonds",            (x,y)=>{ const dx=Math.abs((x&7)-3.5),dy=Math.abs((y&7)-3.5); return (dx+dy)<2; });
+  make("Dots Grid",           (x,y)=>((x&3)===1&&(y&3)===1));
+  make("Weave",               (x,y)=>(((x>>1)+(y))&3)<2 ? (y&1) : (x&1));
+  make("Plus Signs",          (x,y)=>{ const ax=x&3,ay=y&3; return (ax===1||ay===1); });
+  make("Triangles",           (x,y)=>((x&3)<= (y&3)) );
+  make("Scales",              (x,y)=>{ const cx=x&7, cy=y&7; const dx=cx-4, dy=cy-2; return (dx*dx+dy*dy)<6; });
+  return P;
+})();
+
+const TOOLS=[
+  // row 1
+  {id:"select",label:"Marquee Selection",icon:"M3 3h4 M10 3h4 M17 3h4v3 M21 10v4 M21 17v4h-3 M14 21h-4 M7 21H3v-3 M3 14v-4 M3 7V3",dash:true},
+  {id:"wand",  label:"Magic Wand",  icon:"M5 19l9-9 M14 7l1-3 1 3 3 1-3 1-1 3-1-3-3-1z"},
+  // row 2
+  {id:"crop",  label:"Crop",  icon:"M6 2v13a1 1 0 0 0 1 1h13 M2 6h13a1 1 0 0 1 1 1v13"},
+  {id:"move",  label:"Selection Move",icon:"M11 2v18 M2 11h18 M11 2l-3 3 M11 2l3 3 M11 20l-3-3 M11 20l3-3 M2 11l3-3 M2 11l3 3 M20 11l-3-3 M20 11l-3 3"},
+  // row 3
+  {id:"pan",   label:"Pan",   icon:"M8 11V5a1.5 1.5 0 0 1 3 0v5 M11 9V4a1.5 1.5 0 0 1 3 0v6 M14 9.5V5a1.5 1.5 0 0 1 3 0v8c0 3-2 6-6 6-3 0-4-1-6-4l-2-3a1.5 1.5 0 0 1 2.5-1.5L8 12"},
+  {id:"type",  label:"Type",  icon:"M5 5h14 M12 5v14 M9 19h6"},
+  // row 4
+  {id:"pencil",label:"Pencil",icon:"M3 17l9-9 4 4-9 9H3v-4z M14 6l1.5-1.5a1.4 1.4 0 0 1 2 2L16 8z"},
+  {id:"brush", label:"Brush", icon:"M16 3c2 2 1 5-3 8l-2 2-3-3 2-2c3-4 6-5 6-5z M8 12l-3 3c-1 1-2 4-2 4s3-1 4-2l3-3z"},
+  // row 5
+  {id:"line",  label:"Line",  icon:"M4 18L18 4"},
+  {id:"shape", label:"Shape (polyline — click to add points, double-click to finish)", icon:"M3 17l6-10 5 6 5-8"},
+  // row: Spray then Stamp
+  {id:"spray", label:"Spray (airbrush)", icon:"M7 9h6v9H7z M9 9V6 M11 9V6 M15 5l3-1 M15 8l3 0 M15 11l3 1 M5 6l1 1 M6 3l1 1"},
+  {id:"stamp", label:"Stamp", icon:"M8 9V6a3 3 0 0 1 6 0v3 M5 9h12l-1 5H6z M4 17h14v3H4z"},
+  // row 6
+  {id:"rect",  label:"Box Empty",   icon:"M4 5h14v12H4z"},
+  {id:"frect", label:"Box Filled",  icon:"M4 5h14v12H4z",fill:true},
+  // row 7
+  {id:"ellipse",label:"Circle Empty", icon:"M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z"},
+  {id:"fellipse",label:"Circle Full",icon:"M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z",fill:true},
+  // row 8
+  {id:"picker",label:"Color Picker",  icon:"M14 5l5 5-9 9-5 1 1-5z M13 6l5 5"},
+  {id:"replace",label:"Replace Color", icon:"M4 8h10v3l5-4-5-4v3H4z M20 16H10v-3l-5 4 5 4v-3h10z"},
+  // row 9
+  {id:"erase", label:"Eraser", icon:"M9 17l-5-5 8-8 5 5-7 7z M4 12l5 5 M14 19h6",fill:true},
+  {id:"fill",  label:"Bucket Fill",  icon:"M4 11l7-7 6 6-7 7a2 2 0 0 1-3 0l-3-3a2 2 0 0 1 0-3z M18 14c2 3 2 5 0 5s-2-2 0-5z"},
+  // row 10
+  {id:"datkinson",label:"Dithering Atkinson", icon:"M5 5h2v2H5z M11 5h2v2h-2z M17 5h2v2h-2z M8 9h2v2H8z M14 9h2v2h-2z M5 13h2v2H5z M11 13h2v2h-2z M17 13h2v2h-2z",fill:true},
+  {id:"dnoise",label:"Dithering Noise", icon:"M4 5h2v2H4z M9 4h2v2H9z M15 6h2v2h-2z M19 4h1v2h-1z M6 10h2v2H6z M12 11h2v2h-2z M17 10h2v2h-2z M4 15h2v2H4z M10 16h2v2h-2z M16 15h2v2h-2z M19 17h1v2h-1z",fill:true},
+  {id:"dordered",label:"Dithering Ordered (Bayer)", icon:"M4 4h3v3H4z M11 4h3v3h-3z M7 7h3v3H7z M14 7h3v3h-3z M4 11h3v3H4z M11 11h3v3h-3z M7 14h3v3H7z M14 14h3v3h-3z",fill:true},
+  {id:"dfloyd",label:"Dithering Floyd–Steinberg", icon:"M4 5h3v3H4z M10 5h2v2h-2z M15 5h3v3h-3z M7 9h2v2H7z M13 10h3v3h-3z M4 12h3v3H4z M11 14h2v2h-2z M17 13h2v2h-2z",fill:true},
+];
+function buildTools(){
+  const g=$("#toolGrid"); g.innerHTML="";
+  for(const t of TOOLS){
+    const b=document.createElement("div");
+    b.className="tool-btn bevel-out"+(t.id===S.tool?" active":"");
+    b.title=t.label; b.dataset.tool=t.id;
+    const dashAttr=t.dash?' stroke-dasharray="2 1.5"':'';
+    b.innerHTML=`<svg viewBox="0 0 22 22" fill="${t.fill?'#000':'none'}" stroke="#000" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"${dashAttr}><path d="${t.icon}"/></svg>`;
+    b.addEventListener("click",()=>{ commitFloat(); setActiveTool(t.id); });
+    g.appendChild(b);
+  }
+}
+const TOOL_HELP={
+  select:"Marquee Selection — drag a rectangle. Drag inside it to move (floating).",
+  wand:"Magic Wand — click a region of one colour to select its bounding box.",
+  crop:"Crop — drag a box, then move/resize it with the handles. Click outside the box to apply the crop.",
+  move:"Selection Move — drag to reposition a floating paste, a selection's content, or the whole layer.",
+  pan:"Pan — drag to scroll around the image when zoomed in.",
+  type:"Type — click to start, type your text, drag to position. Click again to drop it onto a new layer.",
+  pencil:"Pencil — click/drag to paint with FG. Right-click paints BG.",
+  brush:"Brush — thicker stroke. Optionally fills with the selected pattern.",
+  line:"Line — drag from start to end. Hold Shift to lock to 45°/axis.",
+  shape:"Shape — click to add points; a polyline of straight segments forms. Double-click (or Enter) to finish, Esc to cancel.",
+  spray:"Spray — airbrush; hold down to scatter pixels. Set density & speed in options.",
+  stamp:"Stamp — whatever you copied follows the cursor; click to stamp it down.",
+  rect:"Box Empty — drag a rectangle outline in FG. Shift = square.",
+  frect:"Box Filled — drag a solid rectangle. Shift = square. Optional pattern fill.",
+  ellipse:"Circle Empty — drag a bounding box; an ellipse is inscribed. Shift = circle.",
+  fellipse:"Circle Full — drag a bounding box. Shift = circle. Optional pattern fill.",
+  picker:"Color Picker — click a pixel to set FG (right-click sets BG).",
+  replace:"Replace Color — click a colour to swap every matching pixel to FG (right-click → BG).",
+  erase:"Eraser — paints the background colour over the active layer.",
+  fill:"Bucket Fill — flood-fills the contiguous region. Optional pattern fill.",
+  datkinson:"Dithering (Atkinson) — drag start→end. Blends FG→BG with Atkinson error-diffusion in the chosen direction.",
+  dnoise:"Dithering (Noise) — drag start→end. Blends FG→BG using random noise in the chosen direction.",
+  dordered:"Dithering (Ordered) — drag start→end. Blends FG→BG with a Bayer 4×4 ordered matrix.",
+  dfloyd:"Dithering (Floyd–Steinberg) — drag start→end. Blends FG→BG with Floyd–Steinberg error-diffusion.",
+};
+function setActiveTool(id){
+  if(_typing && id!=="type") commitTyping();
+  S.tool=id;
+  // load this tool's remembered brush size; non-brush tools paint at 1px
+  if(S.brushSizes[id]!==undefined) S.brushSize=S.brushSizes[id];
+  else S.brushSize=1;
+  document.querySelectorAll(".tool-btn").forEach(b=>b.classList.toggle("active",b.dataset.tool===id));
+  $("#toolHelp").textContent=TOOL_HELP[id]||"";
+  buildToolOptions(id);
+  // stamp tool needs a clipboard to float
+  if(id==="stamp" && S.clipboard){
+    S.float={x:0,y:0,w:S.clipboard.w,h:S.clipboard.h,data:S.clipboard.data.slice()};
+  }
+  render(); updateStatus();
+}
+/* Build the Tool Options body to reflect ONLY the active tool. */
+function buildToolOptions(id){
+  const body=$("#toolOptBody"); if(!body) return;
+  const usesBrush = (id==="pencil"||id==="brush"||id==="erase"||id==="line"||id==="shape"||id==="spray");
+  const usesDither = isDither(id);
+  const usesPattern = (id==="brush"||id==="fill"||id==="frect"||id==="fellipse"||id==="spray");
+  const usesBorder = (id==="rect"||id==="ellipse");
+  let h="";
+  if(usesBrush){
+    const opt=(val,lbl)=>`<option value="${val}"${S.brushSize===val?" selected":""}>${lbl}</option>`;
+    h+=`<label class="fld">Brush size
+      <select id="brushSize">${opt(1,"1 px")}${opt(2,"3 px")}${opt(3,"5 px")}${opt(4,"7 px")}</select></label>`;
+  }
+  if(usesBorder){
+    const opt=(val)=>`<option value="${val}"${S.borderThickness===val?" selected":""}>${val} px</option>`;
+    h+=`<label class="fld">Border thickness
+      <select id="borderThickness">${opt(1)}${opt(2)}${opt(3)}${opt(4)}</select></label>`;
+  }
+  if(id==="spray"){
+    h+=`<label class="fld">Density <input type="number" id="sprayDensity" value="${S.sprayDensity}" min="1" max="200"></label>`;
+    h+=`<label class="fld">Speed (ms/tick) <input type="number" id="spraySpeed" value="${S.spraySpeed}" min="10" max="500" step="10"></label>`;
+  }
+  if(usesPattern){
+    h+=`<label class="fld"><span><input type="checkbox" id="chkUsePattern"> Use selected pattern (else FG)</span></label>`;
+  }
+  if(usesDither){
+    h+=`<label class="fld">Direction
+      <select id="ditherDir">
+        <option value="0">→ Left to Right</option>
+        <option value="45">↗ SW to NE</option>
+        <option value="90">↑ Bottom to Top</option>
+        <option value="135">↖ SE to NW</option>
+        <option value="180">← Right to Left</option>
+        <option value="225">↙ NE to SW</option>
+        <option value="270">↓ Top to Bottom</option>
+        <option value="315">↘ NW to SE</option>
+      </select></label>`;
+    h+=`<div class="swap-hint">Blends FG→BG across the drag using only those two colours.</div>`;
+  }
+  if(id==="type"){
+    h+=`<div class="swap-hint">Pick font & size in the <b>Type</b> menu. Click to start, type, drag to move, then click again to drop the text on a new layer.</div>`;
+  }
+  if(id==="shape"){
+    h+=`<div class="swap-hint">Click to add points. Double-click or Enter finishes; Esc cancels.</div>`;
+  }
+  if(id==="stamp"){
+    h+=`<div class="swap-hint">${S.clipboard?"Move the cursor and click to stamp the copied selection.":"Copy a selection first (Ctrl+C), then use this tool."}</div>`;
+  }
+  if(id==="pan"){
+    h+=`<div class="swap-hint">Drag the canvas to scroll. Useful at high zoom.</div>`;
+  }
+  if(!h) h=`<div class="swap-hint">No options for this tool.</div>`;
+  body.innerHTML=h;
+  // wire the dynamic controls
+  const bs=$("#brushSize"); if(bs){ bs.value=S.brushSize; bs.addEventListener("change",e=>{S.brushSize=clamp(parseInt(e.target.value,10)||1,1,4); S.brushSizes[S.tool]=S.brushSize;}); }
+  const bt=$("#borderThickness"); if(bt){ bt.value=S.borderThickness; bt.addEventListener("change",e=>{S.borderThickness=clamp(parseInt(e.target.value,10)||1,1,4);}); }
+  const dd=$("#ditherDir"); if(dd){ dd.value=S.ditherDir; dd.addEventListener("change",e=>{S.ditherDir=parseInt(e.target.value,10);}); }
+  const up=$("#chkUsePattern"); if(up){ up.checked=S.usePattern; up.addEventListener("change",e=>{S.usePattern=e.target.checked;}); }
+  const sd=$("#sprayDensity"); if(sd){ sd.addEventListener("change",e=>{S.sprayDensity=clamp(parseInt(e.target.value,10)||30,1,200);}); }
+  const sp=$("#spraySpeed"); if(sp){ sp.addEventListener("change",e=>{S.spraySpeed=clamp(parseInt(e.target.value,10)||60,10,500);}); }
+}
+function buildPalette(){
+  const host=$("#palette"); host.innerHTML="";
+  if($("#palSetName")) $("#palSetName").textContent="Set "+S.set;
+  PALETTES[S.set].forEach((hex,i)=>{
+    const sw=document.createElement("div");
+    const isActive = (S.activeSlot==="fg" ? i===S.fg : i===S.bg);
+    sw.className="swatch bevel-out"+(isActive?" active-pick":"");
+    sw.style.background=hex;
+    sw.innerHTML=`<span class="idx">${i}</span>`;
+    // click sets the ACTIVE slot (fg or bg); shift/right-click sets the other
+    sw.addEventListener("click",()=>{ setSlotColor(S.activeSlot,i); });
+    sw.addEventListener("contextmenu",e=>{e.preventDefault(); setSlotColor(S.activeSlot==="fg"?"bg":"fg",i);});
+    host.appendChild(sw);
+  });
+  buildColorSlots();
+  buildPatterns();
+}
+function setSlotColor(slot,i){
+  if(slot==="bg") S.bg=i; else S.fg=i;
+  buildPalette(); updateStatus();
+}
+/* Patterns palette — render each 8x8 tile as a swatch (FG on BG). */
+function buildPatterns(){
+  const host=$("#patternGrid"); if(!host) return;
+  host.innerHTML="";
+  const pal=PALETTES[S.set].map(hex2rgb);
+  PATTERNS.forEach((p,pi)=>{
+    const cv=document.createElement("canvas");
+    cv.width=8; cv.height=8; cv.className="pat-sw"+(pi===S.pattern?" sel":"");
+    cv.title=p.name;
+    const cx=cv.getContext("2d"); const im=cx.createImageData(8,8);
+    const fg=pal[S.fg], bg=pal[S.bg];
+    for(let i=0;i<64;i++){ const c=p.tile[i]?fg:bg; im.data[i*4]=c[0];im.data[i*4+1]=c[1];im.data[i*4+2]=c[2];im.data[i*4+3]=255; }
+    cx.putImageData(im,0,0);
+    cv.addEventListener("click",()=>{ S.pattern=pi; buildPatterns(); });
+    host.appendChild(cv);
+  });
+}
+/* Photoshop-style FG/BG overlapping swatches in the toolbox. */
+function buildColorSlots(){
+  const host=$("#colorSlots"); if(!host) return;
+  const pal=PALETTES[S.set];
+  host.innerHTML=`
+    <div class="cs-stack">
+      <div class="cs-sw cs-bg ${S.activeSlot==='bg'?'cs-active':''}" data-slot="bg"
+           style="background:${pal[S.bg]}" title="Background — index ${S.bg} (${PAL_NAMES[S.set][S.bg]})"></div>
+      <div class="cs-sw cs-fg ${S.activeSlot==='fg'?'cs-active':''}" data-slot="fg"
+           style="background:${pal[S.fg]}" title="Foreground — index ${S.fg} (${PAL_NAMES[S.set][S.fg]})"></div>
+      <div class="cs-swap" id="csSwap" title="Swap FG/BG (X)">⤵</div>
+    </div>`;
+  host.querySelectorAll(".cs-sw").forEach(el=>{
+    el.addEventListener("click",()=>{ S.activeSlot=el.dataset.slot; buildPalette(); });
+  });
+  const sw=host.querySelector("#csSwap");
+  if(sw) sw.addEventListener("click",()=>{ const t=S.fg;S.fg=S.bg;S.bg=t; buildPalette(); updateStatus(); });
+}
+function swapColorSet(){
+  // pixels keep their index; only the displayed palette flips.
+  S.set=S.set===0?1:0;
+  buildPalette(); render(); updateStatus();
+}
+
+/* ---- menus ---- */
+function closeMenus(){ document.querySelectorAll(".dropdown-panel").forEach(m=>m.classList.remove("show"));
+  document.querySelectorAll(".menu-title").forEach(t=>t.classList.remove("open")); }
+document.querySelectorAll(".menu-title").forEach(t=>{
+  t.addEventListener("click",e=>{
+    e.stopPropagation();
+    const id=t.dataset.menu, panel=$("#menu-"+id);
+    const open=panel.classList.contains("show");
+    closeMenus();
+    if(!open){ panel.classList.add("show"); t.classList.add("open"); }
+  });
+});
+document.addEventListener("click",e=>{
+  // don't close if the click landed inside an open dropdown's controls
+  if(e.target.closest(".dropdown-panel")) return;
+  closeMenus();
+});
+// clicks inside dropdown form controls shouldn't bubble up to close the menu
+document.querySelectorAll(".dropdown-panel").forEach(dp=>{
+  dp.addEventListener("click",e=>{ if(e.target.closest("select,input,label")) e.stopPropagation(); });
+});
+document.querySelectorAll(".menu-item").forEach(mi=>{
+  mi.addEventListener("click",e=>{ e.stopPropagation(); closeMenus(); doAction(mi.dataset.act); });
+});
+document.querySelectorAll("[data-act]").forEach(el=>{
+  if(el.classList.contains("menu-item")) return;
+  el.addEventListener("click",()=>doAction(el.dataset.act));
+});
+
+/* ---- modal helpers ---- */
+function openModal(id){ $("#"+id).classList.add("show"); }
+function closeModal(id){ $("#"+id).classList.remove("show"); }
+document.querySelectorAll("[data-close]").forEach(el=>el.addEventListener("click",()=>closeModal(el.dataset.close)));
+function openInfo(title,html){ $("#infoTitle").textContent=title; $("#infoBody").innerHTML=html; openModal("infoModal"); }
+
+/* =====================================================================
+   ACTION DISPATCH
+   ===================================================================== */
+function doAction(a){
+  switch(a){
+    case "new": openModal("newModal"); break;
+    case "newsheet": openSheetModal(); break;
+    case "savejson": saveJSON(); break;
+    case "loadjson": $("#fileJson").click(); break;
+    case "savepng": exportPNG(); break;
+    case "loadpng": $("#filePng").click(); break;
+    case "savebin": exportBIN(false); break;
+    case "savebinloadm": exportBIN(true); break;
+    case "savefcb": exportFCB(); break;
+    case "savebasic": exportBASIC(true); break;
+    case "savebasicslow": exportBASIC(false); break;
+    case "saveanim": exportAnimStrip(); break;
+    case "histogram": showHistogram(); break;
+    case "undo": undo(); break;
+    case "redo": redo(); break;
+    case "cut": cutSelection(); break;
+    case "copy": copySelection(); break;
+    case "paste": pasteClipboard(); break;
+    case "selall": commitFloat(); S.sel={x:0,y:0,w:S.w,h:S.h}; setActiveTool("select"); render(); updateStatus(); break;
+    case "selnone": commitFloat(); S.sel=null; render(); updateStatus(); break;
+    case "crop": cropToSelection(); break;
+    case "rotcw": rotateFloat(true); render(); updateStatus(); break;
+    case "rotccw": rotateFloat(false); render(); updateStatus(); break;
+    case "fliph": flipFloat(true); render(); updateStatus(); break;
+    case "flipv": flipFloat(false); render(); updateStatus(); break;
+    case "scale2": scaleSelection(2); render(); updateStatus(); break;
+    case "scale3": scaleSelection(4); render(); updateStatus(); break;
+    case "stamp": commitFloat(); render(); updateStatus(); break;
+    case "newlayer": addLayer(); break;
+    case "duplayer": duplicateLayer(); break;
+    case "dellayer": deleteLayer(); break;
+    case "mergedown": mergeDown(); break;
+    case "clearlayer": clearLayer(); break;
+    case "filllayer": fillLayer(); break;
+    case "nudgeL": nudge(-1,0); break;
+    case "nudgeR": nudge(1,0); break;
+    case "nudgeU": nudge(0,-1); break;
+    case "nudgeD": nudge(0,1); break;
+    case "newframe": addFrame(false); break;
+    case "dupframe": addFrame(true); break;
+    case "delframe": deleteFrame(); break;
+    case "prevframe": gotoFrame(S.curFrame-1); break;
+    case "nextframe": gotoFrame(S.curFrame+1); break;
+    case "play": playStop(); break;
+    case "toggleonion": S.onion=!S.onion; $("#chkOnion").checked=S.onion; drawOverlay(); break;
+    case "zoomin": zoomStep(1); break;
+    case "zoomout": zoomStep(-1); break;
+    case "zoomfit": zoomFit(); break;
+    case "togglegrid": S.showPixGrid=!S.showPixGrid; $("#chkPixGrid").checked=S.showPixGrid; drawOverlay(); break;
+    case "toggletiles": S.showTileGrid=!S.showTileGrid; $("#chkTileGrid").checked=S.showTileGrid; drawOverlay(); break;
+    case "snaptile": S.snap=!S.snap; if($("#chkSnap"))$("#chkSnap").checked=S.snap; flash(S.snap?"Snap to tile grid: ON":"Snap to tile grid: OFF"); break;
+    case "tilecolor": { const g=$("#gridColor"); if(g){ if(!S.showTileGrid){S.showTileGrid=true; if($("#chkTileGrid"))$("#chkTileGrid").checked=true; drawOverlay();} g.click(); } break; }
+    case "switchpal": swapColorSet(); break;
+    case "togglewide": S.wideView=!S.wideView; if($("#chkWide"))$("#chkWide").checked=S.wideView; zoomFit(); break;
+    case "about": openInfo("About Color Spritx",
+      "<p><b>Color Spritx</b> — a Deluxe Paint-style pixel editor for the TRS-80 Color Computer, targeting PMODE&nbsp;1 (G3C, 128×96) and PMODE&nbsp;3 (G6C, 128×192) graphics.</p><p>4 colours per CoCo color set. Multi-frame animation, layers, and export to native 2bpp packed binary (raw or LOADM), 6809 FCB source, BASIC DATA, PNG, or JSON project.</p><p style='margin-top:10px;border-top:1px solid #555;padding-top:8px'>Created by <b>Carlos A. Camacho</b><br>© 2026 Carlos A. Camacho. All rights reserved.</p>"); break;
+    case "shortcuts": openInfo("Keyboard Shortcuts",
+      "<p>B Pencil · L Line · F Fill · R Box · O Oval · S Select · W Wand · K Picker · E Erase · G Grid</p><p>Hold Shift: square/circle/45° · Ctrl+Z/Y Undo/Redo · Ctrl+C/X/V Copy/Cut/Paste · Ctrl+A Select All · Esc Deselect</p><p>, / . previous/next frame · Space play/stop · +/− Zoom · Arrows nudge</p>"); break;
+  }
+}
+
+const ZOOM_MIN=0.04, ZOOM_MAX=500;   // 1/25 .. x500
+function setZoom(z){ S.zoom=clamp(z,ZOOM_MIN,ZOOM_MAX); render(); updateStatus(); }
+/* multiplicative zoom step so it spans the huge range smoothly */
+function zoomStep(dir){
+  let z=S.zoom;
+  if(z<1){ // fine steps below 1x
+    z = dir>0 ? z*1.5 : z/1.5;
+    if(z>0.9 && z<1.4) z=1;
+  } else if(z<8){
+    z = dir>0 ? z+1 : z-1;
+  } else {
+    z = dir>0 ? z*1.5 : z/1.5;
+  }
+  setZoom(Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z)));
+}
+function zoomFit(){
+  const st=$("#stage");
+  const mx=S.wideView?MODES[S.mode].tvX:1, my=S.wideView?MODES[S.mode].tvY:1;
+  const z=Math.max(ZOOM_MIN,Math.min(
+    (st.clientWidth-20)/(S.w*mx),
+    (st.clientHeight-20)/(S.h*my)));
+  setZoom(z);
+}
+
+/* =====================================================================
+   CREATE NEW IMAGE
+   ===================================================================== */
+function createNew(){
+  stopPlay();
+  S.sheet=null;
+  const mode=parseInt($("#newMode").value,10);
+  S.mode=mode; S.w=MODES[mode].w; S.h=MODES[mode].h;
+  S.set=parseInt($("#newSet").value,10);
+  S.tileW=clamp(parseInt($("#newTileW").value,10)||16,1,S.w);
+  S.tileH=clamp(parseInt($("#newTileH").value,10)||16,1,S.h);
+  S.showTileGrid=$("#newShowGrid").checked;
+  S.frames=[makeFrame()];
+  S.curFrame=0; syncFrame();
+  S.fg=1; S.bg=0;
+  S.sel=null; S.float=null; S.undo=[]; S.redo=[]; // keep clipboard
+  applyModeUI();
+  syncControlsFromState();
+  buildLayerList(); buildFrameStrip(); buildPalette(); updateStatus(); refreshHistoryButtons();
+  closeModal("newModal");
+  zoomFit();
+}
+
+/* =====================================================================
+   SPRITESHEET MODE
+   The sheet is one image of size (cols*tileW) x (rows*tileH), which must
+   fit inside the chosen PMODE. Each "sprite" is a tile-cell region.
+   Layers & frames are disabled; one layer holds everything.
+   ===================================================================== */
+function spriteRect(i){
+  const c=S.sheet, col=i%c.cols, row=Math.floor(i/c.cols);
+  return {x:col*c.tileW, y:row*c.tileH, w:c.tileW, h:c.tileH};
+}
+function createSheet(){
+  stopPlay();
+  const mode=parseInt($("#shMode").value,10);
+  const tileW=clamp(parseInt($("#shTileW").value,10)||16,1,MODES[mode].w);
+  const tileH=clamp(parseInt($("#shTileH").value,10)||16,1,MODES[mode].h);
+  let cols=Math.max(1,parseInt($("#shCols").value,10)||1);
+  let rows=Math.max(1,parseInt($("#shRows").value,10)||1);
+  // clamp cols/rows so the sheet fits within the PMODE screen
+  cols=Math.min(cols, Math.floor(MODES[mode].w/tileW));
+  rows=Math.min(rows, Math.floor(MODES[mode].h/tileH));
+  S.mode=mode; S.w=MODES[mode].w; S.h=MODES[mode].h;  // full PMODE buffer
+  S.set=parseInt($("#shSet").value,10);
+  S.tileW=tileW; S.tileH=tileH;
+  S.showTileGrid=true;
+  const sprites=[];
+  for(let i=0;i<cols*rows;i++) sprites.push({name:"Sprite "+(i+1)});
+  S.sheet={tileW,tileH,cols,rows,sprites,sel:0};
+  // single frame, single layer
+  S.frames=[{id:nextFrameId++,dur:Math.round(1000/S.fps),active:0,
+    layers:[{id:nextLayerId++,name:"Sheet",visible:true,data:newLayerData()}]}];
+  S.curFrame=0; syncFrame();
+  S.fg=1; S.bg=0; S.sel=null; S.float=null; S.undo=[]; S.redo=[];
+  applyModeUI();
+  syncControlsFromState();
+  buildSpriteList(); buildPalette(); updateStatus(); refreshHistoryButtons();
+  closeModal("sheetModal");
+  zoomFit();
+  startSpriteFlash();
+}
+/* show/hide panels depending on sheet vs normal mode */
+function applyModeUI(){
+  const sheet=!!S.sheet;
+  const show=(id,on)=>{ const e=$(id); if(e) e.classList.toggle("hidden",!on); };
+  show("#panel-sprites",sheet);
+  show("#panel-layers",!sheet);
+  show("#panel-frames",!sheet);
+  // disable Layer & Frame menus visually in sheet mode
+  document.querySelectorAll('.menu-title[data-menu="layer"],.menu-title[data-menu="frame"]')
+    .forEach(m=>m.style.opacity=sheet?0.4:1);
+}
+function buildSpriteList(){
+  const host=$("#spriteList"); if(!host) return;
+  host.innerHTML="";
+  if(!S.sheet) return;
+  $("#spriteInfo").textContent=S.sheet.sprites.length+" sprites";
+  const pal=PALETTES[S.set].map(hex2rgb);
+  const comp=composite(false);
+  // populate copy-target dropdown
+  const tgt=$("#sprCopyTarget"); if(tgt) tgt.innerHTML="";
+  S.sheet.sprites.forEach((sp,i)=>{
+    const row=document.createElement("div");
+    row.className="sprite-row"+(i===S.sheet.sel?" sel":"");
+    // thumbnail
+    const cv=document.createElement("canvas"); cv.className="sthumb";
+    cv.width=S.sheet.tileW; cv.height=S.sheet.tileH;
+    const cx=cv.getContext("2d"); const im=cx.createImageData(S.sheet.tileW,S.sheet.tileH);
+    const r=spriteRect(i);
+    for(let yy=0;yy<r.h;yy++)for(let xx=0;xx<r.w;xx++){
+      let v=comp[idx(r.x+xx,r.y+yy)]; if(v===255)v=0; const c=pal[v];
+      const o=(yy*r.w+xx)*4; im.data[o]=c[0];im.data[o+1]=c[1];im.data[o+2]=c[2];im.data[o+3]=255;
+    }
+    cx.putImageData(im,0,0);
+    row.appendChild(cv);
+    // editable name
+    const nm=document.createElement("input"); nm.className="sname"; nm.value=sp.name;
+    nm.addEventListener("change",()=>{ sp.name=nm.value; });
+    nm.addEventListener("click",e=>e.stopPropagation());
+    row.appendChild(nm);
+    row.addEventListener("click",()=>{ commitFloat(); S.sheet.sel=i; buildSpriteList(); drawOverlay(); updateStatus(); });
+    host.appendChild(row);
+    if(tgt){ const opt=document.createElement("option"); opt.value=i; opt.textContent=sp.name; tgt.appendChild(opt); }
+  });
+}
+/* copy region between two sprite cells */
+function spriteCopy(from,to){
+  if(from===to) return;
+  pushUndo();
+  const a=spriteRect(from), b=spriteRect(to), d=activeLayer().data;
+  for(let yy=0;yy<a.h;yy++)for(let xx=0;xx<a.w;xx++){
+    if(b.x+xx<S.w && b.y+yy<S.h) d[idx(b.x+xx,b.y+yy)]=d[idx(a.x+xx,a.y+yy)];
+  }
+  render(); buildSpriteList();
+}
+function spriteClear(){
+  pushUndo();
+  const r=spriteRect(S.sheet.sel), d=activeLayer().data;
+  for(let yy=0;yy<r.h;yy++)for(let xx=0;xx<r.w;xx++) d[idx(r.x+xx,r.y+yy)]=0;
+  render(); buildSpriteList();
+}
+/* in-place transform of the selected sprite cell */
+function spriteTransform(kind){
+  pushUndo();
+  const r=spriteRect(S.sheet.sel), d=activeLayer().data;
+  const buf=new Uint8Array(r.w*r.h);
+  for(let yy=0;yy<r.h;yy++)for(let xx=0;xx<r.w;xx++) buf[yy*r.w+xx]=d[idx(r.x+xx,r.y+yy)];
+  const out=new Uint8Array(r.w*r.h);
+  for(let yy=0;yy<r.h;yy++)for(let xx=0;xx<r.w;xx++){
+    let sx=xx, sy=yy;
+    if(kind==="fliph"){ sx=r.w-1-xx; }
+    else if(kind==="flipv"){ sy=r.h-1-yy; }
+    else if(kind==="rotcw"){ // only sensible for square tiles; rotate within cell
+      sx=yy; sy=r.w-1-xx;
+      if(r.w!==r.h){ out[yy*r.w+xx]=buf[yy*r.w+xx]; continue; }
+    }
+    else if(kind==="mirh"){ // left half mirrored onto right
+      if(xx>=Math.floor(r.w/2)){ sx=r.w-1-xx; } else { sx=xx; }
+    }
+    else if(kind==="mirv"){ // top half mirrored onto bottom
+      if(yy>=Math.floor(r.h/2)){ sy=r.h-1-yy; } else { sy=yy; }
+    }
+    out[yy*r.w+xx]=buf[sy*r.w+sx];
+  }
+  for(let yy=0;yy<r.h;yy++)for(let xx=0;xx<r.w;xx++) d[idx(r.x+xx,r.y+yy)]=out[yy*r.w+xx];
+  render(); buildSpriteList();
+}
+/* slow colour-cycling flash of the selected sprite's border */
+let _flashTimer=null, _flashStep=0;
+const FLASH_COLORS=["#ff0000","#00ff00","#0000ff","#00ff00"];
+function startSpriteFlash(){
+  stopSpriteFlash();
+  if(!S.sheet) return;
+  _flashTimer=setInterval(()=>{ _flashStep=(_flashStep+1)%FLASH_COLORS.length; drawOverlay(); }, 600);
+}
+function stopSpriteFlash(){ if(_flashTimer){ clearInterval(_flashTimer); _flashTimer=null; } }
+function flashColor(){ return FLASH_COLORS[_flashStep]; }
+
+/* keep right-panel controls in sync with state */
+function syncControlsFromState(){
+  $("#chkPixGrid").checked=S.showPixGrid;
+  $("#chkTileGrid").checked=S.showTileGrid;
+  $("#tileW").value=S.tileW; $("#tileH").value=S.tileH;
+  $("#gridColor").value=S.gridColor; $("#chkSnap").checked=S.snap;
+  if($("#prevZoomVal")) $("#prevZoomVal").textContent=S.prevZoom+"×";
+  if($("#chkWide")) $("#chkWide").checked=S.wideView;
+  if($("#chkOnion")) $("#chkOnion").checked=S.onion;
+  if($("#fpsInput")) $("#fpsInput").value=S.fps;
+}
+
+/* =====================================================================
+   WIRE-UP CONTROLS + KEYBOARD + INIT
+   ===================================================================== */
+$("#btnSwapSet").addEventListener("click",swapColorSet);
+$("#btnZoomIn").addEventListener("click",()=>doAction("zoomin"));
+$("#btnZoomOut").addEventListener("click",()=>doAction("zoomout"));
+$("#btnUndo").addEventListener("click",undo);
+$("#btnRedo").addEventListener("click",redo);
+$("#newCreate").addEventListener("click",createNew);
+
+$("#chkPixGrid").addEventListener("change",e=>{S.showPixGrid=e.target.checked;drawOverlay();});
+$("#chkTileGrid").addEventListener("change",e=>{S.showTileGrid=e.target.checked;drawOverlay();});
+$("#chkSnap").addEventListener("change",e=>{S.snap=e.target.checked;});
+$("#tileW").addEventListener("change",e=>{S.tileW=clamp(parseInt(e.target.value,10)||1,1,S.w);drawOverlay();});
+$("#tileH").addEventListener("change",e=>{S.tileH=clamp(parseInt(e.target.value,10)||1,1,S.h);drawOverlay();});
+$("#gridColor").addEventListener("input",e=>{S.gridColor=e.target.value;drawOverlay();});
+function setPrevZoom(z){ S.prevZoom=clamp(z,1,8); if($("#prevZoomVal"))$("#prevZoomVal").textContent=S.prevZoom+"×"; render(); }
+$("#prevZoomDn").addEventListener("click",()=>setPrevZoom(S.prevZoom-1));
+$("#prevZoomUp").addEventListener("click",()=>setPrevZoom(S.prevZoom+1));
+
+/* new-feature controls (guarded in case markup absent) */
+function wire(id,ev,fn){ const el=$("#"+id); if(el) el.addEventListener(ev,fn); }
+wire("chkWide","change",e=>{S.wideView=e.target.checked;zoomFit();});
+wire("chkOnion","change",e=>{S.onion=e.target.checked;drawOverlay();});
+wire("fpsInput","change",e=>{S.fps=clamp(parseInt(e.target.value,10)||8,1,30);});
+wire("btnNewFrame","click",()=>doAction("newframe"));
+wire("btnDupFrame","click",()=>doAction("dupframe"));
+wire("btnDelFrame","click",()=>doAction("delframe"));
+wire("btnPlay","click",()=>doAction("play"));
+wire("btnHist","click",()=>doAction("histogram"));
+wire("typeFont","change",e=>{ S.font=e.target.value; if(_typing) renderTypeFloat(); });
+wire("typeSize","change",e=>{ S.fontSize=clamp(parseInt(e.target.value,10)||16,5,96); if(_typing) renderTypeFloat(); });
+
+/* ---- New Spritesheet modal ---- */
+function sheetValidate(){
+  const mode=parseInt($("#shMode").value,10);
+  const tw=Math.max(1,parseInt($("#shTileW").value,10)||1);
+  const th=Math.max(1,parseInt($("#shTileH").value,10)||1);
+  const maxCols=Math.max(1,Math.floor(MODES[mode].w/tw));
+  const maxRows=Math.max(1,Math.floor(MODES[mode].h/th));
+  let cols=Math.max(1,parseInt($("#shCols").value,10)||1);
+  let rows=Math.max(1,parseInt($("#shRows").value,10)||1);
+  cols=Math.min(cols,maxCols); rows=Math.min(rows,maxRows);
+  $("#shCols").max=maxCols; $("#shRows").max=maxRows;
+  const usedW=cols*tw, usedH=rows*th;
+  $("#shInfo").innerHTML =
+    `Screen: ${MODES[mode].w}×${MODES[mode].h}. Max ${maxCols} cols × ${maxRows} rows at this sprite size. `+
+    `Sheet uses ${usedW}×${usedH} px (${cols*rows} sprites).`;
+}
+function openSheetModal(){
+  sheetValidate();
+  openModal("sheetModal");
+}
+["shMode","shTileW","shTileH","shCols","shRows"].forEach(id=>wire(id,"input",sheetValidate));
+wire("shCreate","click",()=>{
+  // clamp cols/rows on create
+  const mode=parseInt($("#shMode").value,10);
+  const tw=Math.max(1,parseInt($("#shTileW").value,10)||1);
+  const th=Math.max(1,parseInt($("#shTileH").value,10)||1);
+  $("#shCols").value=Math.min(parseInt($("#shCols").value,10)||1,Math.floor(MODES[mode].w/tw));
+  $("#shRows").value=Math.min(parseInt($("#shRows").value,10)||1,Math.floor(MODES[mode].h/th));
+  createSheet();
+});
+
+/* ---- Sprite panel buttons ---- */
+wire("btnSprClear","click",()=>{ if(S.sheet) spriteClear(); });
+wire("btnSprRotCW","click",()=>{ if(S.sheet) spriteTransform("rotcw"); });
+wire("btnSprFlipH","click",()=>{ if(S.sheet) spriteTransform("fliph"); });
+wire("btnSprFlipV","click",()=>{ if(S.sheet) spriteTransform("flipv"); });
+wire("btnSprMirH","click",()=>{ if(S.sheet) spriteTransform("mirh"); });
+wire("btnSprMirV","click",()=>{ if(S.sheet) spriteTransform("mirv"); });
+wire("btnSprCopy","click",()=>{ if(S.sheet){ const to=parseInt($("#sprCopyTarget").value,10); spriteCopy(S.sheet.sel,to); } });
+
+$("#fileJson").addEventListener("change",e=>{
+  const f=e.target.files[0]; if(!f)return;
+  const r=new FileReader(); r.onload=()=>{ try{loadJSON(JSON.parse(r.result));}catch(err){flash("Could not read JSON: "+err.message);} };
+  r.readAsText(f); e.target.value="";
+});
+$("#filePng").addEventListener("change",e=>{
+  const f=e.target.files[0]; if(!f)return; importPNG(f); e.target.value="";
+});
+
+document.addEventListener("keyup",e=>{ if(!e.shiftKey) S.shift=false; });
+document.addEventListener("keydown",e=>{
+  S.shift=e.shiftKey;
+  // --- Type tool capture (takes precedence) ---
+  if(_typing){
+    if(e.key==="Enter"){ e.preventDefault(); commitTyping(); return; }
+    if(e.key==="Escape"){ e.preventDefault(); cancelTyping(); return; }
+    if(e.key==="Backspace"){ e.preventDefault(); _typing.text=_typing.text.slice(0,-1); renderTypeFloat(); return; }
+    if(e.key.length===1 && !e.ctrlKey && !e.metaKey){ e.preventDefault(); _typing.text+=e.key; renderTypeFloat(); return; }
+    return;
+  }
+  // --- Shape tool capture ---
+  if(S.shapePts){
+    if(e.key==="Enter"){ e.preventDefault(); endShape(false); return; }
+    if(e.key==="Escape"){ e.preventDefault();
+      activeLayer().data.set(S.shapeBase); S.shapePts=null; S.shapeBase=null; render(); return; }
+  }
+  const ctrl=e.ctrlKey||e.metaKey;
+  if(ctrl){
+    const k=e.key.toLowerCase();
+    if(k==="z"){e.preventDefault();undo();return;}
+    if(k==="y"){e.preventDefault();redo();return;}
+    if(k==="c"){e.preventDefault();copySelection();return;}
+    if(k==="x"){e.preventDefault();cutSelection();return;}
+    if(k==="v"){e.preventDefault();pasteClipboard();return;}
+    if(k==="a"){e.preventDefault();doAction("selall");return;}
+    if(k==="n"){e.preventDefault();openModal("newModal");return;}
+    if(k==="s"){e.preventDefault();saveJSON();return;}
+    return;
+  }
+  switch(e.key){
+    case "b":case "B": setActiveTool("pencil");break;
+    case "l":case "L": setActiveTool("line");break;
+    case "f":case "F": setActiveTool("fill");break;
+    case "r":case "R": setActiveTool("rect");break;
+    case "o":case "O": setActiveTool("ellipse");break;
+    case "w":case "W": setActiveTool("wand");break;
+    case "s":case "S": setActiveTool("select");break;
+    case "k":case "K": setActiveTool("picker");break;
+    case "e":case "E": setActiveTool("erase");break;
+    case "t":case "T": setActiveTool("type");break;
+    case "p":case "P": setActiveTool("pan");break;
+    case "x":case "X": {const t=S.fg;S.fg=S.bg;S.bg=t;buildPalette();updateStatus();break;}
+    case "g":case "G": doAction("togglegrid");break;
+    case "+":case "=": doAction("zoomin");break;
+    case "-":case "_": doAction("zoomout");break;
+    case ",":case "<": e.preventDefault(); doAction("prevframe");break;
+    case ".":case ">": e.preventDefault(); doAction("nextframe");break;
+    case " ": e.preventDefault(); doAction("play");break;
+    case "Escape": doAction("selnone");break;
+    case "Delete":case "Backspace":
+      if(S.float){S.float=null;render();updateStatus();}
+      else if(S.sel){pushUndo();const{x,y,w,h}=S.sel,d=activeLayer().data;
+        for(let yy=0;yy<h;yy++)for(let xx=0;xx<w;xx++)d[idx(x+xx,y+yy)]=0;render();}
+      break;
+    case "ArrowLeft": if(S.float){S.float.x--;render();}else nudge(-1,0);break;
+    case "ArrowRight":if(S.float){S.float.x++;render();}else nudge(1,0);break;
+    case "ArrowUp":   if(S.float){S.float.y--;render();}else nudge(0,-1);break;
+    case "ArrowDown": if(S.float){S.float.y++;render();}else nudge(0,1);break;
+  }
+});
+
+/* =====================================================================
+   PANEL MANAGER — accordion collapse + float / snap (Photoshop-like)
+   ===================================================================== */
+function setupPanels(){
+  document.querySelectorAll("#rightcol .panel").forEach(p=>{
+    const h=p.querySelector("h6");
+    if(!h || h.dataset.wired) return;
+    h.dataset.wired="1";
+    // build the button cluster
+    const btns=document.createElement("span");
+    btns.className="h6-btns";
+    btns.innerHTML=`<span class="h6-btn float" title="Float / snap window">⧉</span><span class="h6-btn caret" title="Collapse / expand">▾</span>`;
+    h.appendChild(btns);
+    // collapse on title click (but not when hitting a button)
+    h.addEventListener("click",e=>{
+      if(e.target.closest(".h6-btn")) return;
+      p.classList.toggle("collapsed");
+    });
+    btns.querySelector(".caret").addEventListener("click",e=>{ e.stopPropagation(); p.classList.toggle("collapsed"); });
+    btns.querySelector(".float").addEventListener("click",e=>{ e.stopPropagation(); togglePanelFloat(p); });
+  });
+}
+const _panelHome=new Map(); // panel -> {parent, nextSibling}
+function togglePanelFloat(p){
+  if(p.classList.contains("floating")){ snapPanel(p); return; }
+  // remember where it lived
+  _panelHome.set(p,{parent:p.parentNode,next:p.nextSibling});
+  const r=p.getBoundingClientRect();
+  $("#floatLayer").appendChild(p);
+  p.classList.add("floating");
+  // place near its old spot but always fully on-screen, nudged left of the dock
+  const left=clamp(r.left-260, 60, window.innerWidth-244);
+  const top =clamp(r.top, 30, window.innerHeight-80);
+  p.style.left=left+"px";
+  p.style.top=top+"px";
+  makeDraggable(p);
+}
+function snapPanel(p){
+  p.classList.remove("floating");
+  p.style.left=p.style.top="";
+  const home=_panelHome.get(p);
+  if(home){ home.parent.insertBefore(p, home.next); _panelHome.delete(p); }
+  else $("#rightcol").appendChild(p);
+}
+function makeDraggable(p){
+  const h=p.querySelector("h6");
+  let sx,sy,ox,oy,drag=false;
+  h.onpointerdown=e=>{
+    if(e.target.closest(".h6-btn")) return;
+    drag=true; h.setPointerCapture(e.pointerId);
+    sx=e.clientX; sy=e.clientY;
+    const r=p.getBoundingClientRect(); ox=r.left; oy=r.top;
+    e.preventDefault();
+  };
+  h.onpointermove=e=>{
+    if(!drag) return;
+    p.style.left=clamp(ox+(e.clientX-sx),0,window.innerWidth-60)+"px";
+    p.style.top=clamp(oy+(e.clientY-sy),24,window.innerHeight-30)+"px";
+  };
+  h.onpointerup=h.onpointercancel=()=>{drag=false;};
+}
+
+/* ---------- INIT ---------- */
+function init(){
+  S.frames=[makeFrame()];
+  S.curFrame=0; syncFrame();
+  buildTools(); buildPalette(); buildLayerList(); buildFrameStrip();
+  setupPanels();
+  applyModeUI();
+  syncControlsFromState();
+  setActiveTool("pencil");
+  updateStatus(); refreshHistoryButtons();
+  zoomFit();
+}
+init();
+
+</script>
+</body>
+</html>
