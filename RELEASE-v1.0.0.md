@@ -2,7 +2,7 @@
 
 **Release date:** November 14, 2026
 **Commit:** `505273a`
-**File:** `color-spritx.html` (single-file, ~135 KB)
+**File:** `index.html` (single-file, ~135 KB)
 
 Color Spritx is a browser-based pixel-art editor built for the **TRS-80 Color Computer**. It targets the two 4-color graphics modes — **PMODE 1** (128×96) and **PMODE 3** (128×192) — with authentic MC6847 palettes, true 4:3 screen proportions, and exact byte-level packing. Everything the CoCo cares about is modeled correctly, so what you draw is what the hardware shows.
 
@@ -12,7 +12,7 @@ This 1.0 release ships the complete feature set we spent the design cycle buildi
 
 ## Download & install
 
-Download `color-spritx.html` and open it in any modern browser. No install, no build step, no dependencies to manage. Everything (HTML, CSS, JavaScript) is inlined into a single file.
+Download `index.html` and open it in any modern browser. No install, no build step, no dependencies to manage. Everything (HTML, CSS, JavaScript) is inlined into a single file.
 
 - Works offline except for the Type tool's Google fonts (they fall back to a system font when offline).
 - Project files are plain JSON — portable between browsers and machines.

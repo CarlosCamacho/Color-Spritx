@@ -39,7 +39,7 @@ The result is a tool that lets you design CoCo sprites and screens visually, the
 
 ## Quick Start
 
-1. Open `color-spritx.html` in any modern browser (Chrome, Firefox, Safari, Edge).
+1. Open `index.html` in any modern browser (Chrome, Firefox, Safari, Edge).
 2. The canvas opens in PMODE 3 (128×192) by default.
 3. Pick a color from the **Palette** panel — it loads into the foreground slot in the toolbox.
 4. Choose the **Pencil** and start drawing.
